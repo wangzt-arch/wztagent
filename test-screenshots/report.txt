@@ -1,0 +1,79 @@
+Launching browser: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+STEP 1: 打开首页 http://localhost:3002/
+NETWORK 200 GET http://localhost:3002/
+NETWORK 200 GET http://localhost:3002/src/main.js
+NETWORK 200 GET http://localhost:3002/styles/main.css
+NETWORK 200 GET http://localhost:3002/@vite/client
+NETWORK 200 GET http://localhost:3002/src/App.vue
+NETWORK 200 GET http://localhost:3002/node_modules/vite/dist/client/env.mjs
+CONSOLE [debug]: [vite] connecting...
+NETWORK 200 GET http://localhost:3002/node_modules/.vite/deps/vue.js?v=2c62589d
+NETWORK 200 GET http://localhost:3002/src/composables/useAppStore.js
+NETWORK 200 GET http://localhost:3002/src/components/layout/AppHeader.vue
+NETWORK 200 GET http://localhost:3002/src/components/layout/AppFooter.vue
+NETWORK 200 GET http://localhost:3002/src/components/tabs/CreateTab.vue
+NETWORK 200 GET http://localhost:3002/src/components/tabs/SettingsTab.vue
+NETWORK 200 GET http://localhost:3002/src/components/tabs/GalleryTab.vue
+CONSOLE [debug]: [vite] connected.
+NETWORK 200 GET http://localhost:3002/src/components/common/ProgressOverlay.vue
+NETWORK 200 GET http://localhost:3002/src/components/common/ErrorToast.vue
+NETWORK 200 GET http://localhost:3002/src/components/common/Lightbox.vue
+NETWORK 200 GET http://localhost:3002/src/App.vue?vue&type=style&index=0&scoped=7a7a37b1&lang.css
+NETWORK 200 GET http://localhost:3002/@id/__x00__plugin-vue:export-helper
+NETWORK 200 GET http://localhost:3002/src/components/layout/AppHeader.vue?vue&type=style&index=0&scoped=a04def32&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/layout/AppFooter.vue?vue&type=style&index=0&scoped=772024c0&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/tabs/SettingsTab.vue?vue&type=style&index=0&scoped=3c40a902&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/tabs/CreateTab.vue?vue&type=style&index=0&scoped=7ced2c03&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/create/ImageCreator.vue
+NETWORK 200 GET http://localhost:3002/src/components/tabs/GalleryTab.vue?vue&type=style&index=0&scoped=90e28f0a&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/create/VideoCreator.vue
+NETWORK 200 GET http://localhost:3002/src/components/common/ProgressOverlay.vue?vue&type=style&index=0&scoped=d013f5ff&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/common/ErrorToast.vue?vue&type=style&index=0&scoped=2e938c60&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/common/Lightbox.vue?vue&type=style&index=0&scoped=d45fd56e&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/create/ImageCreator.vue?vue&type=style&index=0&scoped=fc860c92&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/create/VideoCreator.vue?vue&type=style&index=0&scoped=16642a77&lang.css
+NETWORK 200 GET http://localhost:3002/src/components/common/UploadArea.vue
+NETWORK 200 GET http://localhost:3002/src/components/common/UploadArea.vue?vue&type=style&index=0&scoped=3c6472d4&lang.css
+Home title: Agnes Creator Studio
+Active nav: 创作
+Active media tab: 图片生成
+Active sub tab: 文生图
+STEP 2: 截图初始状态 01-initial.png
+STEP 3: 点击"设置"导航按钮
+CONSOLE [verbose]: [DOM] Password field is not contained in a form: (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) %o
+Active nav: 设置
+STEP 4: 填入 API Key
+API Key value: sk-test-dummy-key-12345
+STEP 5: 填入 API 地址
+Base URL value: https://apihub.agnes-ai.com/v1
+STEP 7: 截图设置页面 02-settings.png
+STEP 6: 点击"测试连接"按钮
+NETWORK 401 GET https://apihub.agnes-ai.com/v1/models
+CONSOLE [error]: Failed to load resource: the server responded with a status of 401 ()
+Status text: 连接失败
+STEP 8: 点击"创作"导航按钮
+Active nav: 创作
+Active media tab: 图片生成
+Active sub tab: 文生图
+STEP 9/10: 确认图片生成和文生图选中
+STEP 11: 输入提示词
+Prompt value: 一只可爱的橘猫坐在窗台上，夕阳余晖，电影感
+STEP 12: 截图填好提示词 03-prompt-filled.png
+STEP 13: 点击"生成图片"按钮
+STEP 14: 等待 3 秒
+NETWORK 401 POST https://apihub.agnes-ai.com/v1/images/generations
+CONSOLE [error]: Failed to load resource: the server responded with a status of 401 ()
+CONSOLE [error]: Error: 无效的令牌 (request id: 20260720071951200122227735XlP9A)
+    at Object.generateImage (http://localhost:3002/src/composables/useAppStore.js:136:13)
+STEP 15: 截图 04-generate-result.png
+Has generated image: false
+Status: null
+Error: null
+STEP 16: 错误状态: NONE
+STEP 17: 切换到"图生图"子标签
+Active sub tab: 图生图
+STEP 18: 切换到视频生成再切回来
+After click video: media tab = 视频生成
+After click back to image: media tab = 图片生成, sub tab = 图生图
+STEP 19: 点击"画廊"导航
+Active nav: 画廊

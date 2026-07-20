@@ -1,0 +1,172 @@
+[
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/@vite/client",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/styles/main.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/main.js",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/node_modules/.vite/deps/vue.js?v=2c62589d",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/App.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/node_modules/vite/dist/client/env.mjs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/composables/useAppStore.js",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/layout/AppHeader.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/layout/AppFooter.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/tabs/CreateTab.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/tabs/GalleryTab.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/tabs/SettingsTab.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/common/ProgressOverlay.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/common/ErrorToast.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/common/Lightbox.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/App.vue?vue&type=style&index=0&scoped=7a7a37b1&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/@id/__x00__plugin-vue:export-helper",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/layout/AppHeader.vue?vue&type=style&index=0&scoped=a04def32&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/layout/AppFooter.vue?vue&type=style&index=0&scoped=772024c0&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/create/ImageCreator.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/create/VideoCreator.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/tabs/CreateTab.vue?vue&type=style&index=0&scoped=7ced2c03&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/tabs/SettingsTab.vue?vue&type=style&index=0&scoped=3c40a902&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/tabs/GalleryTab.vue?vue&type=style&index=0&scoped=90e28f0a&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/common/ProgressOverlay.vue?vue&type=style&index=0&scoped=d013f5ff&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/common/ErrorToast.vue?vue&type=style&index=0&scoped=2e938c60&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/common/Lightbox.vue?vue&type=style&index=0&scoped=d45fd56e&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/common/UploadArea.vue",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/create/ImageCreator.vue?vue&type=style&index=0&scoped=fc860c92&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/create/VideoCreator.vue?vue&type=style&index=0&scoped=16642a77&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "http://localhost:3002/src/components/common/UploadArea.vue?vue&type=style&index=0&scoped=3c6472d4&lang.css",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "url": "https://apihub.agnes-ai.com/v1/models",
+    "status": 401
+  },
+  {
+    "method": "POST",
+    "url": "https://apihub.agnes-ai.com/v1/images/generations",
+    "status": 401
+  }
+]

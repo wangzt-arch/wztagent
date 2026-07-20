@@ -1,0 +1,26 @@
+[
+  {
+    "type": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "type": "debug",
+    "text": "[vite] connected."
+  },
+  {
+    "type": "verbose",
+    "text": "[DOM] Password field is not contained in a form: (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) %o"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 401 ()"
+  },
+  {
+    "type": "error",
+    "text": "Error: 无效的令牌 (request id: 20260720071951200122227735XlP9A)\n    at Object.generateImage (http://localhost:3002/src/composables/useAppStore.js:136:13)"
+  }
+]
