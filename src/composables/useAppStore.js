@@ -7,6 +7,32 @@ function getApiBaseUrl() {
   return baseUrl.value || 'https://apihub.agnes-ai.com/v1'
 }
 
+async function fetchWithRetry(url, options, { maxRetries = 3, onRetry } = {}) {
+  let lastError
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options)
+      if (res.ok) return res
+
+      const isRetryable = res.status === 503 || res.status === 502 || res.status === 504 || res.status === 429
+      if (!isRetryable || attempt === maxRetries) {
+        return res
+      }
+
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
+      if (onRetry) onRetry(attempt + 1, maxRetries, res.status)
+      await new Promise(r => setTimeout(r, delay))
+    } catch (err) {
+      lastError = err
+      if (attempt === maxRetries) throw err
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
+      if (onRetry) onRetry(attempt + 1, maxRetries, 'network')
+      await new Promise(r => setTimeout(r, delay))
+    }
+  }
+  throw lastError || new Error('Max retries exceeded')
+}
+
 const currentTab = ref('create')
 const mediaType = ref('image')
 const imageMode = ref('txt2img')
@@ -131,14 +157,22 @@ async function generateImage() {
       if (editPrompt.value) body.prompt = editPrompt.value
     }
 
-    const res = await fetch(getApiBaseUrl() + '/images/generations', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + apiKey.value,
-        'Content-Type': 'application/json'
+    const res = await fetchWithRetry(
+      getApiBaseUrl() + '/images/generations',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + apiKey.value,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
       },
-      body: JSON.stringify(body)
-    })
+      {
+        onRetry: (attempt, max, status) => {
+          progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
+        }
+      }
+    )
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
@@ -200,14 +234,22 @@ async function generateVideo() {
       body.image = videoRefUrl.value || vidImagePreview.value
     }
 
-    const res = await fetch(getApiBaseUrl() + '/videos', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + apiKey.value,
-        'Content-Type': 'application/json'
+    const res = await fetchWithRetry(
+      getApiBaseUrl() + '/videos',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + apiKey.value,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
       },
-      body: JSON.stringify(body)
-    })
+      {
+        onRetry: (attempt, max, status) => {
+          progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
+        }
+      }
+    )
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
@@ -235,9 +277,11 @@ function startPolling(taskId, type) {
 
   const poll = async () => {
     try {
-      const res = await fetch(getApiBaseUrl() + '/videos/' + taskId, {
-        headers: { Authorization: 'Bearer ' + apiKey.value }
-      })
+      const res = await fetchWithRetry(
+        getApiBaseUrl() + '/videos/' + taskId,
+        { headers: { Authorization: 'Bearer ' + apiKey.value } },
+        { maxRetries: 2 }
+      )
       if (!res.ok) throw new Error('HTTP ' + res.status)
 
       const data = await res.json()
@@ -354,9 +398,11 @@ function clearGallery() {
 async function checkGalleryItem(item) {
   if (!item.taskId) { alert('没有任务ID'); return }
   try {
-    const res = await fetch(getApiBaseUrl() + '/videos/' + item.taskId, {
-      headers: { Authorization: 'Bearer ' + apiKey.value }
-    })
+    const res = await fetchWithRetry(
+      getApiBaseUrl() + '/videos/' + item.taskId,
+      { headers: { Authorization: 'Bearer ' + apiKey.value } },
+      { maxRetries: 2 }
+    )
     if (!res.ok) throw new Error('HTTP ' + res.status)
     const data = await res.json()
 
