@@ -63,7 +63,7 @@ watch(mediaType, (newVal) => {
 })
 
 function loadSettings() {
-  apiKey.value = localStorage.getItem('agnes_api_key') || ''
+  apiKey.value = localStorage.getItem('agnes_api_key') || 'sk-Sf7UT27WPfgTY0n3lE3mpN1prY0XX2sbn8Zt0tMkXsC6Eu8H'
   baseUrl.value = localStorage.getItem('agnes_base_url') || 'https://apihub.agnes-ai.com/v1'
   galleryItems.value = JSON.parse(localStorage.getItem('agnes_gallery') || '[]')
 }
