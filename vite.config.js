@@ -6,7 +6,14 @@ export default defineConfig({
   base: './',
   server: {
     port: 3000,
-    proxy: {}
+    proxy: {
+      '/api': {
+        target: 'https://apihub.agnes-ai.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/v1'),
+        secure: true
+      }
+    }
   },
   build: {
     outDir: 'build',

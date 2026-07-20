@@ -1,5 +1,12 @@
 import { ref, computed, watch } from 'vue'
 
+const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV
+
+function getApiBaseUrl() {
+  if (isDev) return '/api'
+  return baseUrl.value || 'https://apihub.agnes-ai.com/v1'
+}
+
 const currentTab = ref('create')
 const mediaType = ref('image')
 const imageMode = ref('txt2img')
@@ -69,7 +76,7 @@ function saveSetting(key) {
 async function testConnection() {
   if (!apiKey.value) { connStatus.value = 'error'; return }
   try {
-    const res = await fetch(baseUrl.value + '/models', {
+    const res = await fetch(getApiBaseUrl() + '/models', {
       headers: { Authorization: 'Bearer ' + apiKey.value }
     })
     connStatus.value = res.ok ? 'ok' : 'error'
@@ -124,7 +131,7 @@ async function generateImage() {
       if (editPrompt.value) body.prompt = editPrompt.value
     }
 
-    const res = await fetch(baseUrl.value + '/images/generations', {
+    const res = await fetch(getApiBaseUrl() + '/images/generations', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + apiKey.value,
@@ -181,20 +188,19 @@ async function generateVideo() {
   generatedVideo.value = false
 
   try {
+    const promptText = videoPrompt.value.trim() || motionPrompt.value.trim()
     const body = {
       model: modelName.value,
-      input: {
-        prompt: videoPrompt.value || motionPrompt.value
-      },
+      prompt: promptText,
       num_frames: parseInt(videoDuration.value),
       frame_rate: videoFps.value
     }
-    if (videoNegPrompt.value) body.input.negative_prompt = videoNegPrompt.value
+    if (videoNegPrompt.value) body.negative_prompt = videoNegPrompt.value
     if (videoMode.value === 'img2vid') {
-      body.input.input_reference = videoRefUrl.value || vidImagePreview.value
+      body.image = videoRefUrl.value || vidImagePreview.value
     }
 
-    const res = await fetch(baseUrl.value + '/videos', {
+    const res = await fetch(getApiBaseUrl() + '/videos', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + apiKey.value,
@@ -229,7 +235,7 @@ function startPolling(taskId, type) {
 
   const poll = async () => {
     try {
-      const res = await fetch(baseUrl.value + '/videos/' + taskId, {
+      const res = await fetch(getApiBaseUrl() + '/videos/' + taskId, {
         headers: { Authorization: 'Bearer ' + apiKey.value }
       })
       if (!res.ok) throw new Error('HTTP ' + res.status)
@@ -348,7 +354,7 @@ function clearGallery() {
 async function checkGalleryItem(item) {
   if (!item.taskId) { alert('没有任务ID'); return }
   try {
-    const res = await fetch(baseUrl.value + '/videos/' + item.taskId, {
+    const res = await fetch(getApiBaseUrl() + '/videos/' + item.taskId, {
       headers: { Authorization: 'Bearer ' + apiKey.value }
     })
     if (!res.ok) throw new Error('HTTP ' + res.status)
