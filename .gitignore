@@ -5,3 +5,4 @@ dist/
 .agnes/
 .DS_Store
 Thumbs.db
+build/

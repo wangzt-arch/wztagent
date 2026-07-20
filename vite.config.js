@@ -8,7 +8,7 @@ export default defineConfig({
     proxy: {}
   },
   build: {
-    outDir: 'dist',
+    outDir: 'build',
     assetsDir: 'assets'
   }
 })
