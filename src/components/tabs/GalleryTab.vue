@@ -5,12 +5,21 @@
         <h2>创作画廊</h2>
         <p class="page-desc">{{ store.galleryItems.value.length }} 件作品</p>
       </div>
-      <button v-if="store.galleryItems.value.length > 0" class="btn-danger" @click="store.clearGallery">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-        </svg>
-        清空
-      </button>
+      <div class="header-actions">
+        <button v-if="store.galleryItems.value.length > 0" class="btn-danger" @click="store.clearGallery">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          </svg>
+          清空
+        </button>
+        <button v-if="hasGeneratingItems" class="btn-secondary" @click="refreshAllStatus">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="m16 16 5 5"/>
+          </svg>
+          刷新状态
+        </button>
+      </div>
     </div>
 
     <div v-if="store.galleryItems.value.length === 0" class="empty-gallery">
@@ -38,26 +47,42 @@
             loading="lazy"
           >
           <video
-            v-else-if="item.mediaUrl && item.type.includes('video')"
-            :src="item.mediaUrl"
-            muted
-            loop
-            @mouseenter="$event.target.play()"
-            @mouseleave="$event.target.pause()"
+            v-else-if="item.type.includes('video') && item.status === 'completed' && playingIdx === idx && currentVideoUrl"
+            :src="currentVideoUrl"
+            controls
+            autoplay
+            :muted="false"
+            @ended="onVideoEnded"
+            @click.stop
           ></video>
-          <div class="media-placeholder" v-if="!item.mediaUrl">
-            <svg v-if="item.type.includes('image')" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-            </svg>
-            <svg v-else width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <div class="media-placeholder" v-if="item.type.includes('video') && (item.status !== 'completed' || (!item.mediaUrl && loadingIdx !== idx))">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+            </svg>
+          </div>
+          <div v-if="item.type.includes('video') && item.status === 'generating'" class="media-overlay">
+            <span class="overlay-spinner"></span>
+            <span class="overlay-text">生成中...</span>
+          </div>
+          <div v-if="loadingIdx === idx" class="media-overlay">
+            <span class="overlay-spinner"></span>
+            <span class="overlay-text">加载中...</span>
+          </div>
+          <div v-if="item.type.includes('video') && item.status === 'completed' && playingIdx !== idx && loadingIdx !== idx" class="play-overlay" @click="playVideo(idx, item)">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="12" r="12" fill="rgba(0,0,0,0.5)"/>
+              <path d="M8 5v14l11-7z" fill="white"/>
             </svg>
           </div>
         </div>
         <div class="gallery-meta">
           <div class="meta-tags">
             <span class="badge" :class="item.type">{{ store.getTypeLabel(item.type) }}</span>
-            <span class="badge" :class="item.status">{{ store.getStatusLabel(item.status) }}</span>
+            <span v-if="item.type.includes('video')" class="badge status-badge" :class="item.status" @click="showStatusDetail(item)">
+              <span v-if="item.status === 'generating'" class="status-spinner"></span>
+              {{ store.getStatusLabel(item.status) }}
+            </span>
+            <span v-else class="badge completed">{{ store.getStatusLabel('completed') }}</span>
           </div>
           <p class="meta-prompt">{{ item.prompt || '无描述' }}</p>
           <span class="meta-time">{{ store.formatTime(item.createdAt) }}</span>
@@ -78,13 +103,100 @@
         </div>
       </div>
     </div>
+
+    <div v-if="statusDetail" class="status-modal" @click="statusDetail = null">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <div class="modal-status" :class="statusDetail.status">
+            <span v-if="statusDetail.status === 'generating'" class="modal-spinner"></span>
+            {{ store.getStatusLabel(statusDetail.status) }}
+          </div>
+          <button class="modal-close" @click="statusDetail = null">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-row">
+            <span class="detail-label">类型</span>
+            <span class="detail-value">{{ store.getTypeLabel(statusDetail.type) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">提示词</span>
+            <span class="detail-value">{{ statusDetail.prompt || '无' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">创建时间</span>
+            <span class="detail-value">{{ store.formatTime(statusDetail.createdAt) }}</span>
+          </div>
+          <div v-if="statusDetail.taskId" class="detail-row">
+            <span class="detail-label">任务ID</span>
+            <span class="detail-value">{{ statusDetail.taskId }}</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button v-if="statusDetail.status === 'generating' && statusDetail.taskId" class="btn-secondary" @click="store.checkGalleryItem(statusDetail); statusDetail = null">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            刷新状态
+          </button>
+          <button v-if="statusDetail.status === 'failed' && statusDetail.taskId" class="btn-primary" @click="store.resumeGalleryItem(statusDetail); statusDetail = null">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+            </svg>
+            重新生成
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { useAppStore } from '../../composables/useAppStore.js'
 
 const store = useAppStore()
+const statusDetail = ref(null)
+const playingIdx = ref(-1)
+const loadingIdx = ref(-1)
+const currentVideoUrl = ref('')
+
+const hasGeneratingItems = computed(() => {
+  return store.galleryItems.value.some(item => item.status === 'generating' && item.taskId)
+})
+
+function showStatusDetail(item) {
+  statusDetail.value = { ...item }
+}
+
+function refreshAllStatus() {
+  store.refreshGalleryStatuses()
+}
+
+function onVideoEnded() {
+  playingIdx.value = -1
+  currentVideoUrl.value = ''
+}
+
+async function playVideo(idx, item) {
+  loadingIdx.value = idx
+  try {
+    const url = await store.fetchVideoUrl(item)
+    if (url) {
+      currentVideoUrl.value = url
+      playingIdx.value = idx
+    } else {
+      alert('未能获取视频地址')
+    }
+  } catch (err) {
+    alert('加载失败: ' + err.message)
+  } finally {
+    loadingIdx.value = -1
+  }
+}
 </script>
 
 <style scoped>
@@ -104,6 +216,12 @@ const store = useAppStore()
   margin-bottom: 2rem;
   flex-wrap: wrap;
   gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .header-title h2 {
@@ -241,5 +359,212 @@ const store = useAppStore()
   .gallery-grid { grid-template-columns: 1fr; }
   .gallery-header { flex-direction: column; align-items: stretch; }
   .header-title h2 { font-size: 1.5rem; }
+}
+
+.status-badge {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.status-spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.badge.generating {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+
+.badge.completed {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.badge.failed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.media-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  backdrop-filter: blur(4px);
+}
+
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.play-overlay:hover svg {
+  transform: scale(1.15);
+}
+
+.play-overlay svg {
+  transition: transform 0.2s;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+}
+
+.gallery-media video {
+  cursor: pointer;
+}
+
+.overlay-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent-purple);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.overlay-text {
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fade-in 0.2s ease;
+  padding: 1rem;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.modal-status.generating { color: #fb923c; }
+.modal-status.completed { color: #22c55e; }
+.modal-status.failed { color: #ef4444; }
+
+.modal-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(251, 146, 60, 0.3);
+  border-top-color: #fb923c;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.detail-value {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+  max-width: 60%;
+  word-break: break-all;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-input);
+}
+
+.modal-footer .btn-secondary,
+.modal-footer .btn-primary {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
 }
 </style>

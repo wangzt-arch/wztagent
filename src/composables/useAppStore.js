@@ -197,7 +197,7 @@ async function generateImage() {
       generatedImage.value = true
       generatedImageUrl.value = url
       const galleryType = imageMode.value === 'img2img' ? 'image-to-image' : 'text-to-image'
-      addToGallery(galleryType, url, imagePrompt.value || editPrompt.value)
+      addToGallery(galleryType, url, imagePrompt.value || editPrompt.value, null, 'completed')
     } else {
       throw new Error('未获取到图片 URL')
     }
@@ -317,8 +317,8 @@ function startPolling(taskId, type) {
       progressWidth.value = Math.min(90, (elapsed / 600000) * 100)
 
       if (elapsed < 60000) progressText.value = '排队中...'
-      else if (elapsed < 180000) progressText.value = '生成中... (' + Math.floor(elapsed/60000) + '分钟)'
-      else progressText.value = '即将完成... (' + Math.floor(elapsed/60000) + '分钟)'
+      else if (elapsed < 180000) progressText.value = '生成中...'
+      else progressText.value = '即将完成...'
 
     } catch (err) {
       console.warn('Poll error:', err.message)
@@ -426,6 +426,57 @@ async function checkGalleryItem(item) {
   }
 }
 
+async function fetchVideoUrl(item) {
+  if (!item.taskId) return null
+  const res = await fetchWithRetry(
+    getApiBaseUrl() + '/videos/' + item.taskId,
+    { headers: { Authorization: 'Bearer ' + apiKey.value } },
+    { maxRetries: 2 }
+  )
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  const data = await res.json()
+  // const url = data.output?.video_url || data.video_url
+  const url= data?.metadata?.url
+  if (url) {
+    item.mediaUrl = url
+    item.status = 'completed'
+    saveGallery()
+    return url
+  }
+  if (data.status === 'failed') {
+    item.status = 'failed'
+    saveGallery()
+  }
+  return null
+}
+
+async function refreshGalleryStatuses() {
+  const generatingItems = galleryItems.value.filter(item => item.status === 'generating' && item.taskId)
+  if (generatingItems.length === 0) return
+
+  for (const item of generatingItems) {
+    try {
+      const res = await fetchWithRetry(
+        getApiBaseUrl() + '/videos/' + item.taskId,
+        { headers: { Authorization: 'Bearer ' + apiKey.value } },
+        { maxRetries: 2 }
+      )
+      if (!res.ok) continue
+
+      const data = await res.json()
+      if (data.status === 'completed' || data.output?.video_url) {
+        item.mediaUrl = data.output?.video_url || data.video_url
+        item.status = 'completed'
+      } else if (data.status === 'failed') {
+        item.status = 'failed'
+      }
+    } catch (err) {
+      console.warn('刷新状态失败:', item.taskId, err.message)
+    }
+  }
+  saveGallery()
+}
+
 function resumeGalleryItem(item) {
   checkGalleryItem(item)
 }
@@ -524,6 +575,8 @@ export function useAppStore() {
     saveGallery,
     clearGallery,
     checkGalleryItem,
+    fetchVideoUrl,
+    refreshGalleryStatuses,
     resumeGalleryItem,
     downloadImage,
     downloadVideo,
