@@ -42,6 +42,9 @@
       "target": "portable",
       "icon": "src/images/cat.png",
       "artifactName": "${productName}-${version}-${arch}.exe"
+    },
+    "optionalDependencies": {
+      "@rollup/rollup-linux-x64-gnu": "*"
     }
   }
 }
