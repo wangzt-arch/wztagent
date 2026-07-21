@@ -21,11 +21,19 @@
             <!-- Text to Image -->
             <div v-if="store.imageMode.value === 'txt2img'" key="txt2img">
               <div class="form-group">
-                <label>提示词</label>
+                <div class="label-row">
+                  <label>提示词</label>
+                  <button class="clear-btn" @click="store.imagePrompt.value = ''">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                    清空
+                  </button>
+                </div>
                 <textarea
                   v-model="store.imagePrompt.value"
                   placeholder="描述你想要的图片内容，越详细越好...&#10;例如：一只橘猫坐在窗台上，夕阳的余晖洒在它身上，室内暖色调，电影感光影"
-                  rows="4"
+                  rows="8"
                 ></textarea>
               </div>
             </div>
@@ -46,11 +54,19 @@
                 />
               </div>
               <div class="form-group">
-                <label>编辑提示词</label>
+                <div class="label-row">
+                  <label>编辑提示词</label>
+                  <button class="clear-btn" @click="store.editPrompt.value = ''">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                    清空
+                  </button>
+                </div>
                 <textarea
                   v-model="store.editPrompt.value"
                   placeholder="描述你想要如何修改图片...&#10;例如：把背景换成海边日落，色调变暖"
-                  rows="3"
+                  rows="6"
                 ></textarea>
               </div>
             </div>
@@ -374,6 +390,37 @@ const sizeOptions = [
 .preview-fade-leave-to {
   opacity: 0;
   transform: translateY(-12px);
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.label-row label {
+  margin-bottom: 0;
+}
+
+.clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-btn:hover {
+  color: var(--accent-purple);
+  border-color: var(--accent-purple);
+  background: rgba(124, 58, 237, 0.05);
 }
 
 @media (max-width: 900px) {

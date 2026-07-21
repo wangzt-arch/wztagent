@@ -21,11 +21,19 @@
             <!-- Text to Video -->
             <div v-if="store.videoMode.value === 'txt2vid'" key="txt2vid">
               <div class="form-group">
-                <label>视频描述</label>
+                <div class="label-row">
+                  <label>视频描述</label>
+                  <button class="clear-btn" @click="store.videoPrompt.value = ''">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                    清空
+                  </button>
+                </div>
                 <textarea
                   v-model="store.videoPrompt.value"
                   placeholder="描述你想要的视频内容...&#10;例如：一只猫咪在阳光下悠闲地散步，镜头缓缓推进，暖色调，电影感"
-                  rows="4"
+                  rows="8"
                 ></textarea>
               </div>
             </div>
@@ -46,11 +54,19 @@
                 />
               </div>
               <div class="form-group">
-                <label>运动描述（可选）</label>
+                <div class="label-row">
+                  <label>运动描述（可选）</label>
+                  <button class="clear-btn" @click="store.motionPrompt.value = ''">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                    清空
+                  </button>
+                </div>
                 <textarea
                   v-model="store.motionPrompt.value"
                   placeholder="描述图片中想要的动态效果..."
-                  rows="3"
+                  rows="6"
                 ></textarea>
               </div>
             </div>
@@ -372,6 +388,38 @@ const durationOptions = [
 .preview-fade-leave-to {
   opacity: 0;
   transform: translateY(-12px);
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.form-group .label-row label {
+  display: inline;
+  margin-bottom: 0;
+}
+
+.clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-btn:hover {
+  color: var(--accent-purple);
+  border-color: var(--accent-purple);
+  background: rgba(124, 58, 237, 0.05);
 }
 
 @media (max-width: 900px) {

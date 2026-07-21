@@ -120,14 +120,34 @@ watch(mediaType, (newVal) => {
 /**
  * 加载用户设置
  * 从 localStorage 恢复 API Key、基础地址和画廊数据
- * 同时初始化 API 客户端配置
+ * 同时初始化 API 客户端配置，并对画廊数据做状态迁移
  */
 function loadSettings() {
   apiKey.value = localStorage.getItem('agnes_api_key') || 'sk-Sf7UT27WPfgTY0n3lE3mpN1prY0XX2sbn8Zt0tMkXsC6Eu8H'
   baseUrl.value = localStorage.getItem('agnes_base_url') || 'https://apihub.agnes-ai.com/v1'
-  galleryItems.value = JSON.parse(localStorage.getItem('agnes_gallery') || '[]')
+  const raw = JSON.parse(localStorage.getItem('agnes_gallery') || '[]')
+  galleryItems.value = raw.map(normalizeGalleryItem)
   setApiKey(apiKey.value)
   setBaseUrl(baseUrl.value)
+}
+
+/**
+ * 规范化画廊作品的状态字段（用于加载旧数据时的状态迁移）
+ * 规则：
+ * - 已有明确 status（generating/completed/failed）→ 保持
+ * - 无 status 字段（旧数据）：有 mediaUrl → completed, 有 taskId → generating, 否则 failed
+ * @param {object} item - 原始作品对象
+ * @returns {object} 规范化后的作品对象
+ */
+function normalizeGalleryItem(item) {
+  const validStatus = ['generating', 'completed', 'failed']
+  let status = validStatus.includes(item.status) ? item.status : null
+  if (status === null) {
+    if (item.mediaUrl) status = 'completed'
+    else if (item.taskId) status = 'generating'
+    else status = 'failed'
+  }
+  return { ...item, status }
 }
 
 /**
@@ -211,15 +231,24 @@ async function generateImageWrapper() {
 
   isImageGenerating.value = true
   progressWidth.value = 0
-  progressText.value = '正在生成图片...'
+  progressText.value = '正在创建任务...'
   errorMsg.value = ''
   generatedImage.value = false
-  startProgressSimulation()
+
+  const promptText = imagePrompt.value || editPrompt.value
+  const galleryType = imageMode.value === 'img2img' ? 'image-to-image' : 'text-to-image'
+
+  // 图片同步生成，无真正的任务ID，taskId 传 null
+  const newItem = addToGallery(galleryType, null, promptText, null, 'generating')
+
+  toastMsg.value = '任务已创建，进度将在画廊中显示'
+  setTimeout(() => { toastMsg.value = '' }, 3000)
+  isImageGenerating.value = false
 
   try {
     const body = {
       model: modelName.value,
-      prompt: imagePrompt.value || editPrompt.value,
+      prompt: promptText,
       size: imageSize.value
     }
     if (negativePrompt.value) body.negative_prompt = negativePrompt.value
@@ -232,18 +261,17 @@ async function generateImageWrapper() {
       progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
     })
 
-    progressWidth.value = 100
-    progressText.value = '生成完成！'
+    newItem.mediaUrl = url
+    newItem.status = 'completed'
+    saveGallery()
+
     generatedImage.value = true
     generatedImageUrl.value = url
-    const galleryType = imageMode.value === 'img2img' ? 'image-to-image' : 'text-to-image'
-    addToGallery(galleryType, url, imagePrompt.value || editPrompt.value, null, 'completed')
   } catch (err) {
     console.error(err)
     errorMsg.value = err.message
-  } finally {
-    stopProgressSimulation()
-    isImageGenerating.value = false
+    newItem.status = 'failed'
+    saveGallery()
   }
 }
 
@@ -401,8 +429,9 @@ function stopProgressSimulation() {
  * @param {string} type - 类型：text-to-image | image-to-image | text-to-video | image-to-video
  * @param {string|null} mediaUrl - 媒体 URL
  * @param {string} prompt - 提示词
- * @param {string|null} taskId - 任务 ID（视频生成用）
+ * @param {string|null} taskId - 任务 ID（视频生成用，图片同步生成传 null）
  * @param {string} [status] - 状态：generating | completed | failed
+ * @returns {object} 新创建的作品对象引用
  */
 function addToGallery(type, mediaUrl, prompt, taskId, status) {
   const item = {
@@ -416,6 +445,7 @@ function addToGallery(type, mediaUrl, prompt, taskId, status) {
   }
   galleryItems.value.unshift(item)
   saveGallery()
+  return item
 }
 
 /** 保存画廊到 localStorage */

@@ -8,7 +8,7 @@
           </svg>
         </div>
         <div class="logo-text">
-          <h1>Agnes Creator</h1>
+          <h1>AI Creator</h1>
           <span class="subtitle">AI Image & Video Studio</span>
         </div>
       </div>

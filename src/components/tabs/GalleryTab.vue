@@ -67,7 +67,7 @@
         >
         <div class="gallery-media" :class="'media-' + item.type">
           <img
-            v-if="item.mediaUrl && item.type.includes('image')"
+            v-if="item.mediaUrl && item.type.includes('image') && item.status === 'completed'"
             :src="item.mediaUrl"
             alt=""
             @click="store.openLightbox(idx)"
@@ -89,12 +89,15 @@
             muted
             class="poster-video"
           ></video>
-          <div class="media-placeholder" v-if="item.type.includes('video') && (item.status !== 'completed' || (!item.mediaUrl && loadingIdx !== idx && playingIdx !== idx))">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <div class="media-placeholder" v-else>
+            <svg v-if="item.type.includes('image')" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+            </svg>
+            <svg v-else width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
             </svg>
           </div>
-          <div v-if="item.type.includes('video') && item.status === 'generating'" class="media-overlay">
+          <div v-if="item.status === 'generating'" class="media-overlay">
             <span class="overlay-spinner"></span>
             <span class="overlay-text">生成中...</span>
           </div>
@@ -112,11 +115,10 @@
         <div class="gallery-meta">
           <div class="meta-tags">
             <span class="badge" :class="item.type">{{ store.getTypeLabel(item.type) }}</span>
-            <span v-if="item.type.includes('video')" class="badge status-badge" :class="item.status" @click="showStatusDetail(item)">
+            <span class="badge status-badge" :class="item.status" @click="showStatusDetail(item)">
               <span v-if="item.status === 'generating'" class="status-spinner"></span>
               {{ store.getStatusLabel(item.status) }}
             </span>
-            <span v-else class="badge completed">{{ store.getStatusLabel('completed') }}</span>
           </div>
           <p class="meta-prompt">{{ item.prompt || '无描述' }}</p>
           <span class="meta-time">{{ store.formatTime(item.createdAt) }}</span>

@@ -1,4 +1,4 @@
-# Agnes Creator Studio
+# Creator Studio
 
 基于 Agnes AI 的多媒体创作工作室，支持图片生成和视频生成。
 
