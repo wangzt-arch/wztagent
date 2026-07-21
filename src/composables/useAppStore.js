@@ -774,9 +774,14 @@ async function sendMessage(text) {
     id: Date.now() + 1,
     role: 'assistant',
     content: '',
+    displayContent: '',
+    typewriterTimer: null,
     createdAt: new Date().toISOString()
   }
   session.messages.push(assistantMsg)
+
+  // 通过 session.messages 索引获取 reactive 引用
+  const msgIndex = session.messages.length - 1
 
   // 更新会话标题（用第一条消息的前20个字符）
   if (session.messages.length === 2) {
@@ -791,22 +796,54 @@ async function sendMessage(text) {
       content: m.content
     }))
 
-    assistantMsg.displayContent = ''
-    assistantMsg.content = ''
-
     await chat({ messages }, (chunk, fullContent) => {
-      assistantMsg.content = fullContent
-      assistantMsg.displayContent = fullContent
+      // 通过 session.messages 索引访问，触发响应式更新
+      const reactiveMsg = session.messages[msgIndex]
+      reactiveMsg.content = fullContent
+
+      // 只在第一次有内容时启动打字机定时器
+      if (!reactiveMsg.typewriterTimer && fullContent.length > 0) {
+        startTypewriter(session, msgIndex)
+      }
     })
   } catch (err) {
     console.error(err)
     errorMsg.value = err.message
-    assistantMsg.content = '抱歉，发生了错误：' + err.message
-    assistantMsg.displayContent = assistantMsg.content
+    const reactiveMsg = session.messages[msgIndex]
+    reactiveMsg.content = '抱歉，发生了错误：' + err.message
+    reactiveMsg.displayContent = reactiveMsg.content
   } finally {
     chatLoading.value = false
-    assistantMsg.displayContent = assistantMsg.content
-    saveChatSessions()
+    const reactiveMsg = session.messages[msgIndex]
+    if (reactiveMsg.typewriterTimer) {
+      const waitTimer = setInterval(() => {
+        if (!reactiveMsg.typewriterTimer) {
+          clearInterval(waitTimer)
+          reactiveMsg.displayContent = reactiveMsg.content
+          saveChatSessions()
+        }
+      }, 100)
+    } else {
+      reactiveMsg.displayContent = reactiveMsg.content
+      saveChatSessions()
+    }
+  }
+
+  /**
+   * 启动打字机效果
+   * 每 25ms 通过 reactive 引用增加 1 个字符
+   */
+  function startTypewriter(s, idx) {
+    const timer = setInterval(() => {
+      const m = s.messages[idx]
+      if (m.displayContent.length < m.content.length) {
+        m.displayContent = m.content.slice(0, m.displayContent.length + 1)
+      } else {
+        clearInterval(timer)
+        m.typewriterTimer = null
+      }
+    }, 25)
+    s.messages[idx].typewriterTimer = timer
   }
 }
 
