@@ -17,6 +17,7 @@
             </button>
           </div>
 
+          <div class="card-scroll">
           <Transition name="mode-fade" mode="out-in">
             <!-- Text to Image -->
             <div v-if="store.imageMode.value === 'txt2img'" key="txt2img">
@@ -84,6 +85,7 @@
           <div class="form-group">
             <label>反向提示词（可选）</label>
             <input v-model="store.negativePrompt.value" type="text" placeholder="不想要的内容...">
+          </div>
           </div>
 
           <button class="btn-primary" @click="store.generateImage" :disabled="store.isImageGenerating.value">
@@ -170,14 +172,60 @@ const sizeOptions = [
 </script>
 
 <style scoped>
+.creation-panel {
+  height: 100%;
+}
+
 .panel-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch;
+  height: 100%;
 }
 
-.controls-column { min-width: 0; }
+.controls-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.controls-column .card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: calc(100vh - 200px);
+  padding: 1.5rem;
+}
+
+.card-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 0.5rem;
+}
+
+.card-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.card-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.controls-column .btn-primary {
+  flex-shrink: 0;
+  margin-top: 1rem;
+}
 
 .preview-column {
   position: sticky;

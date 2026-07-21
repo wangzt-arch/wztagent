@@ -59,6 +59,9 @@ onBeforeUnmount(() => {
   padding: 2rem;
   position: relative;
   z-index: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .tab-switch-enter-active,

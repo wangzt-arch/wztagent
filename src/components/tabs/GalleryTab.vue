@@ -1,39 +1,29 @@
 <template>
   <div class="gallery-tab">
-    <div class="gallery-header">
-      <div class="header-title">
-        <h2>创作画廊</h2>
-        <p class="page-desc">{{ store.galleryItems.value.length }} 件作品</p>
+    <div class="gallery-topbar">
+      <div class="gallery-header">
+        <div class="header-title">
+          <h2>创作画廊</h2>
+          <p class="page-desc">{{ store.galleryItems.value.length }} 件作品</p>
+        </div>
+        <div class="header-actions">
+          <button v-if="store.galleryItems.value.length > 0" class="btn-danger" @click="store.clearGallery">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+            </svg>
+            清空
+          </button>
+          <button v-if="hasGeneratingItems" class="btn-secondary" @click="refreshAllStatus">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="m16 16 5 5"/>
+            </svg>
+            刷新状态
+          </button>
+        </div>
       </div>
-      <div class="header-actions">
-        <button v-if="store.galleryItems.value.length > 0" class="btn-danger" @click="store.clearGallery">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-          </svg>
-          清空
-        </button>
-        <button v-if="hasGeneratingItems" class="btn-secondary" @click="refreshAllStatus">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
-            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="m16 16 5 5"/>
-          </svg>
-          刷新状态
-        </button>
-      </div>
-    </div>
 
-    <div v-if="store.galleryItems.value.length === 0" class="empty-gallery">
-      <div class="empty-icon">
-        <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-        </svg>
-      </div>
-      <p>还没有作品</p>
-      <p class="empty-hint">去创作页面生成你的第一张图片/视频吧！</p>
-    </div>
-
-    <template v-else>
-      <div class="category-tabs">
+      <div v-if="store.galleryItems.value.length > 0" class="category-tabs">
         <button
           v-for="cat in categories"
           :key="cat.key"
@@ -54,101 +44,115 @@
           <span class="count">{{ cat.count }}</span>
         </button>
       </div>
+    </div>
 
-      <div v-if="filteredGalleryItems.length === 0" class="empty-gallery empty-category">
-        <p>当前分类下没有作品</p>
+    <div class="gallery-content">
+      <div v-if="store.galleryItems.value.length === 0" class="empty-gallery">
+        <div class="empty-icon">
+          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+          </svg>
+        </div>
+        <p>还没有作品</p>
+        <p class="empty-hint">去创作页面生成你的第一张图片/视频吧！</p>
       </div>
 
-      <div v-else class="gallery-grid">
-        <div
-          v-for="(item, idx) in filteredGalleryItems"
-          :key="item.id || idx"
-          class="gallery-item"
-        >
-        <div class="gallery-media" :class="'media-' + item.type">
-          <img
-            v-if="item.mediaUrl && item.type.includes('image') && item.status === 'completed'"
-            :src="item.mediaUrl"
-            alt=""
-            @click="store.openLightbox(idx)"
-            loading="lazy"
+      <template v-else>
+        <div v-if="filteredGalleryItems.length === 0" class="empty-gallery empty-category">
+          <p>当前分类下没有作品</p>
+        </div>
+
+        <div v-else class="gallery-grid">
+          <div
+            v-for="(item, idx) in filteredGalleryItems"
+            :key="item.id || idx"
+            class="gallery-item"
           >
-          <video
-            v-else-if="item.type.includes('video') && item.status === 'completed' && playingIdx === idx && currentVideoUrl"
-            :src="currentVideoUrl"
-            controls
-            autoplay
-            :muted="false"
-            @ended="onVideoEnded"
-            @click.stop
-          ></video>
-          <video
-            v-else-if="item.type.includes('video') && item.status === 'completed' && item.mediaUrl && playingIdx !== idx"
-            :src="item.mediaUrl + '#t=0.1'"
-            preload="metadata"
-            muted
-            class="poster-video"
-          ></video>
-          <div class="media-placeholder" v-else>
-            <svg v-if="item.type.includes('image')" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-            </svg>
-            <svg v-else width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-            </svg>
-          </div>
-          <div v-if="item.status === 'generating'" class="media-overlay">
-            <span class="overlay-spinner"></span>
-            <span class="overlay-text">生成中...</span>
-          </div>
-          <div v-if="loadingIdx === idx" class="media-overlay">
-            <span class="overlay-spinner"></span>
-            <span class="overlay-text">加载中...</span>
-          </div>
-          <div v-if="item.type.includes('video') && item.status === 'completed' && playingIdx !== idx && loadingIdx !== idx" class="play-overlay" @click="playVideo(idx, item)">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="12" r="12" fill="rgba(0,0,0,0.5)"/>
-              <path d="M8 5v14l11-7z" fill="white"/>
-            </svg>
-          </div>
-          <div v-if="item.isDemo" class="demo-badge">DEMO</div>
-        </div>
-        <div class="gallery-meta" @click="showStatusDetail(item)">
-          <div class="meta-tags">
-            <span class="badge" :class="item.type">{{ store.getTypeLabel(item.type) }}</span>
-            <span class="badge status-badge" :class="item.status">
-              <span v-if="item.status === 'generating'" class="status-spinner"></span>
-              {{ store.getStatusLabel(item.status) }}
-            </span>
-          </div>
-          <p class="meta-prompt">{{ item.prompt || '无描述' }}</p>
-          <span class="meta-time">{{ store.formatTime(item.createdAt) }}</span>
-          <div class="gallery-actions" @click.stop>
-            <div v-if="item.status === 'failed' && item.taskId" class="action-group">
-              <button class="btn-secondary btn-sm" @click="store.resumeGalleryItem(item)">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+            <div class="gallery-media" :class="'media-' + item.type">
+              <img
+                v-if="item.mediaUrl && item.type.includes('image') && item.status === 'completed'"
+                :src="item.mediaUrl"
+                alt=""
+                @click="store.openLightbox(idx)"
+                loading="lazy"
+              >
+              <video
+                v-else-if="item.type.includes('video') && item.status === 'completed' && playingIdx === idx && currentVideoUrl"
+                :src="currentVideoUrl"
+                controls
+                autoplay
+                :muted="false"
+                @ended="onVideoEnded"
+                @click.stop
+              ></video>
+              <video
+                v-else-if="item.type.includes('video') && item.status === 'completed' && item.mediaUrl && playingIdx !== idx"
+                :src="item.mediaUrl + '#t=0.1'"
+                preload="metadata"
+                muted
+                class="poster-video"
+              ></video>
+              <div class="media-placeholder" v-else>
+                <svg v-if="item.type.includes('image')" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                 </svg>
-                恢复
-              </button>
-              <button class="btn-secondary btn-sm" @click="store.checkGalleryItem(item)">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                <svg v-else width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
                 </svg>
-                检查
-              </button>
+              </div>
+              <div v-if="item.status === 'generating'" class="media-overlay">
+                <span class="overlay-spinner"></span>
+                <span class="overlay-text">生成中...</span>
+              </div>
+              <div v-if="loadingIdx === idx" class="media-overlay">
+                <span class="overlay-spinner"></span>
+                <span class="overlay-text">加载中...</span>
+              </div>
+              <div v-if="item.type.includes('video') && item.status === 'completed' && playingIdx !== idx && loadingIdx !== idx" class="play-overlay" @click="playVideo(idx, item)">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="12" r="12" fill="rgba(0,0,0,0.5)"/>
+                  <path d="M8 5v14l11-7z" fill="white"/>
+                </svg>
+              </div>
+              <div v-if="item.isDemo" class="demo-badge">DEMO</div>
             </div>
-            <button v-if="!item.isDemo" class="btn-danger btn-sm delete-btn" @click="store.removeGalleryItem(item)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-              </svg>
-              删除
-            </button>
+            <div class="gallery-meta" @click="showStatusDetail(item)">
+              <div class="meta-tags">
+                <span class="badge" :class="item.type">{{ store.getTypeLabel(item.type) }}</span>
+                <span class="badge status-badge" :class="item.status">
+                  <span v-if="item.status === 'generating'" class="status-spinner"></span>
+                  {{ store.getStatusLabel(item.status) }}
+                </span>
+              </div>
+              <p class="meta-prompt">{{ item.prompt || '无描述' }}</p>
+              <span class="meta-time">{{ store.formatTime(item.createdAt) }}</span>
+              <div class="gallery-actions" @click.stop>
+                <div v-if="item.status === 'failed' && item.taskId" class="action-group">
+                  <button class="btn-secondary btn-sm" @click="store.resumeGalleryItem(item)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                    </svg>
+                    恢复
+                  </button>
+                  <button class="btn-secondary btn-sm" @click="store.checkGalleryItem(item)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    检查
+                  </button>
+                </div>
+                <button v-if="!item.isDemo" class="btn-danger btn-sm delete-btn" @click="store.removeGalleryItem(item)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                  删除
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      </div>
-    </template>
+      </template>
+    </div>
 
     <div v-if="statusDetail" class="status-modal" @click="statusDetail = null">
       <div class="modal-content" @click.stop>
@@ -279,6 +283,9 @@ async function playVideo(idx, item) {
 
 <style scoped>
 .gallery-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   animation: tab-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -287,11 +294,43 @@ async function playVideo(idx, item) {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.gallery-topbar {
+  flex-shrink: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.25rem;
+}
+
+.gallery-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5rem;
+  min-height: 0;
+}
+
+.gallery-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.gallery-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gallery-content::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.gallery-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
 .gallery-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -305,7 +344,6 @@ async function playVideo(idx, item) {
 .category-tabs {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1.5rem;
   padding: 0.35rem;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -401,8 +439,8 @@ async function playVideo(idx, item) {
 
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
 }
 
 .gallery-item {
@@ -415,8 +453,8 @@ async function playVideo(idx, item) {
 
 .gallery-item:hover {
   border-color: var(--border-active);
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-glow), 0 12px 40px rgba(0, 0, 0, 0.3);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow), 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .gallery-media {
@@ -452,30 +490,30 @@ async function playVideo(idx, item) {
 }
 
 .gallery-meta {
-  padding: 1rem;
+  padding: 0.75rem;
   cursor: pointer;
 }
 
 .meta-tags {
   display: flex;
-  gap: 0.375rem;
-  margin-bottom: 0.5rem;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
   flex-wrap: wrap;
 }
 
 .meta-prompt {
   color: var(--text-secondary);
-  font-size: 0.8rem;
-  margin-bottom: 0.375rem;
+  font-size: 0.75rem;
+  margin-bottom: 0.3rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .meta-time {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--text-muted);
 }
 
@@ -483,13 +521,13 @@ async function playVideo(idx, item) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.375rem;
-  margin-top: 0.5rem;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
 }
 
 .action-group {
   display: flex;
-  gap: 0.375rem;
+  gap: 0.3rem;
 }
 
 .delete-btn {
@@ -497,21 +535,25 @@ async function playVideo(idx, item) {
 }
 
 .btn-sm {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 @media (max-width: 900px) {
-  .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 }
 
 @media (max-width: 768px) {
-  .gallery-grid { grid-template-columns: 1fr; }
+  .gallery-grid { grid-template-columns: repeat(2, 1fr); }
   .gallery-header { flex-direction: column; align-items: stretch; }
-  .header-title h2 { font-size: 1.5rem; }
+  .header-title h2 { font-size: 1.25rem; }
+}
+
+@media (max-width: 480px) {
+  .gallery-grid { grid-template-columns: 1fr; }
 }
 
 .status-badge {
@@ -577,6 +619,8 @@ async function playVideo(idx, item) {
 }
 
 .play-overlay svg {
+  width: 36px;
+  height: 36px;
   transition: transform 0.2s;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
 }
@@ -593,8 +637,8 @@ async function playVideo(idx, item) {
 }
 
 .overlay-spinner {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: 3px solid rgba(255, 255, 255, 0.2);
   border-top-color: var(--accent-purple);
   border-radius: 50%;
@@ -603,18 +647,18 @@ async function playVideo(idx, item) {
 
 .overlay-text {
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 
 .demo-badge {
   position: absolute;
-  top: 0.75rem;
-  left: 0.75rem;
-  padding: 0.25rem 0.6rem;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.2rem 0.5rem;
   background: var(--accent-purple, #7c3aed);
   color: #fff;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 600;
   text-transform: uppercase;
   border-radius: 4px;

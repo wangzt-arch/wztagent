@@ -43,6 +43,9 @@ const mediaTypes = [
 
 <style scoped>
 .create-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   animation: tab-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -54,7 +57,8 @@ const mediaTypes = [
 .media-tabs {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  flex-shrink: 0;
 }
 
 .media-tab-btn {

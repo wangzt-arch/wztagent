@@ -253,6 +253,7 @@ body {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   position: relative;
+  flex-shrink: 0;
 }
 
 .sub-tabs::before {
