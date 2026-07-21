@@ -93,8 +93,49 @@ const connStatus = ref('')
 
 // ==================== 画廊状态 ====================
 
-/** 画廊作品列表 */
-const galleryItems = ref([])
+/**
+ * 演示作品列表（始终展示在画廊最前面，不可删除）
+ * 使用 src/images 下的本地图片：dog.png（3D盲盒公仔）、fox.png（狐狸）、cat.png（小猫法师）
+ */
+const demoItems = ref([
+  {
+    id: 'demo_dog',
+    type: 'text-to-image',
+    status: 'completed',
+    prompt: '3D blind box toy design, cute Shiba Inu astronaut, wearing a white puffy spacesuit, transparent gold visor, holding a blue planet lollipop in mouth, sitting on the cratered lunar surface, deep blue space with tiny stars in background, soft cute big eyes, chibi proportion (2-head tall), bright studio soft lighting, pastel blue and white color scheme, smooth PVC plastic texture with matte fabric, super adorable clay figure style, C4D render, Octane render, white background with soft shadows, high detail, 8k, blind box display angle',
+    mediaUrl: new URL('../images/dog.png', import.meta.url).href,
+    createdAt: '2026-07-21T00:00:00.000Z',
+    isDemo: true
+  },
+  {
+    id: 'demo_fox',
+    type: 'text-to-image',
+    status: 'completed',
+    prompt: '狐狸，森林，魔幻风格，唯美',
+    mediaUrl: new URL('../images/fox.png', import.meta.url).href,
+    createdAt: '2026-07-21T00:00:01.000Z',
+    isDemo: true
+  },
+  {
+    id: 'demo_cat',
+    type: 'text-to-image',
+    status: 'completed',
+    prompt: '小猫法师，魔法帽，可爱，奇幻',
+    mediaUrl: new URL('../images/cat.png', import.meta.url).href,
+    createdAt: '2026-07-21T00:00:02.000Z',
+    isDemo: true
+  }
+])
+
+/** 用户真实的画廊作品列表（持久化到 localStorage） */
+const userGalleryItems = ref([])
+
+/**
+ * 合并后的画廊作品列表（demo 始终在最前）
+ * 通过 computed 自动响应用户作品变化
+ */
+const galleryItems = computed(() => [...demoItems.value, ...userGalleryItems.value])
+
 /** Lightbox 索引（-1 表示关闭）*/
 const lightboxIdx = ref(-1)
 
@@ -144,7 +185,7 @@ function loadSettings() {
   apiKey.value = localStorage.getItem('agnes_api_key') || 'sk-Sf7UT27WPfgTY0n3lE3mpN1prY0XX2sbn8Zt0tMkXsC6Eu8H'
   baseUrl.value = localStorage.getItem('agnes_base_url') || 'https://apihub.agnes-ai.com/v1'
   const raw = JSON.parse(localStorage.getItem('agnes_gallery') || '[]')
-  galleryItems.value = raw.map(normalizeGalleryItem)
+  userGalleryItems.value = raw.map(normalizeGalleryItem)
   setApiKey(apiKey.value)
   setBaseUrl(baseUrl.value)
 
@@ -371,7 +412,7 @@ function startPolling(taskId) {
 
       if (data.status === 'completed' || data.output?.video_url) {
         stopPolling(taskId)
-        const item = galleryItems.value.find(i => i.taskId === taskId)
+        const item = userGalleryItems.value.find(i => i.taskId === taskId)
         if (item) {
           item.mediaUrl = data.output?.video_url || data.video_url
           item.status = 'completed'
@@ -382,7 +423,7 @@ function startPolling(taskId) {
 
       if (data.status === 'failed') {
         stopPolling(taskId)
-        const item = galleryItems.value.find(i => i.taskId === taskId)
+        const item = userGalleryItems.value.find(i => i.taskId === taskId)
         if (item) { item.status = 'failed'; saveGallery() }
         return
       }
@@ -416,9 +457,9 @@ function stopAllPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
 }
 
-/** 启动画廊中所有生成中任务的轮询 */
+/** 启动画廊中所有生成中任务的轮询（仅用户作品） */
 function startGalleryPolling() {
-  galleryItems.value.forEach(item => {
+  userGalleryItems.value.forEach(item => {
     if (item.status === 'generating' && item.taskId) {
       startPolling(item.taskId)
     }
@@ -477,32 +518,36 @@ function addToGallery(type, mediaUrl, prompt, taskId, status) {
     status: status || 'generating',
     createdAt: new Date().toISOString()
   }
-  galleryItems.value.unshift(item)
+  userGalleryItems.value.unshift(item)
   saveGallery()
   return item
 }
 
-/** 保存画廊到 localStorage */
+/** 保存用户作品到 localStorage（demo 不保存） */
 function saveGallery() {
-  localStorage.setItem('agnes_gallery', JSON.stringify(galleryItems.value.slice(0, 100)))
+  localStorage.setItem('agnes_gallery', JSON.stringify(userGalleryItems.value.slice(0, 100)))
 }
 
-/** 清空画廊 */
+/** 清空用户作品（demo 不受影响） */
 function clearGallery() {
   if (confirm('确定清空所有作品？')) {
-    galleryItems.value = []
+    userGalleryItems.value = []
     localStorage.removeItem('agnes_gallery')
   }
 }
 
 /**
- * 删除单个画廊作品
+ * 删除单个画廊作品（demo 不可删除）
  * @param {object} item - 作品对象
  */
 function removeGalleryItem(item) {
-  const idx = galleryItems.value.findIndex(i => i.id === item.id)
+  if (item.isDemo) {
+    alert('演示作品不可删除')
+    return
+  }
+  const idx = userGalleryItems.value.findIndex(i => i.id === item.id)
   if (idx !== -1) {
-    galleryItems.value.splice(idx, 1)
+    userGalleryItems.value.splice(idx, 1)
     saveGallery()
   }
 }
@@ -564,7 +609,7 @@ async function fetchVideoUrl(item) {
 
 /** 批量刷新画廊中所有生成中作品的状态 */
 async function refreshGalleryStatuses() {
-  const generatingItems = galleryItems.value.filter(item => item.status === 'generating' && item.taskId)
+  const generatingItems = userGalleryItems.value.filter(item => item.status === 'generating' && item.taskId)
   if (generatingItems.length === 0) return
 
   for (const item of generatingItems) {

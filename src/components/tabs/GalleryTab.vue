@@ -111,18 +111,19 @@
               <path d="M8 5v14l11-7z" fill="white"/>
             </svg>
           </div>
+          <div v-if="item.isDemo" class="demo-badge">DEMO</div>
         </div>
-        <div class="gallery-meta">
+        <div class="gallery-meta" @click="showStatusDetail(item)">
           <div class="meta-tags">
             <span class="badge" :class="item.type">{{ store.getTypeLabel(item.type) }}</span>
-            <span class="badge status-badge" :class="item.status" @click="showStatusDetail(item)">
+            <span class="badge status-badge" :class="item.status">
               <span v-if="item.status === 'generating'" class="status-spinner"></span>
               {{ store.getStatusLabel(item.status) }}
             </span>
           </div>
           <p class="meta-prompt">{{ item.prompt || '无描述' }}</p>
           <span class="meta-time">{{ store.formatTime(item.createdAt) }}</span>
-          <div class="gallery-actions">
+          <div class="gallery-actions" @click.stop>
             <div v-if="item.status === 'failed' && item.taskId" class="action-group">
               <button class="btn-secondary btn-sm" @click="store.resumeGalleryItem(item)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -137,7 +138,7 @@
                 检查
               </button>
             </div>
-            <button class="btn-danger btn-sm delete-btn" @click="store.removeGalleryItem(item)">
+            <button v-if="!item.isDemo" class="btn-danger btn-sm delete-btn" @click="store.removeGalleryItem(item)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
               </svg>
@@ -452,6 +453,7 @@ async function playVideo(idx, item) {
 
 .gallery-meta {
   padding: 1rem;
+  cursor: pointer;
 }
 
 .meta-tags {
@@ -605,6 +607,22 @@ async function playVideo(idx, item) {
   font-weight: 500;
 }
 
+.demo-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  background: var(--accent-purple, #7c3aed);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+  z-index: 2;
+}
+
 .status-modal {
   position: fixed;
   inset: 0;
@@ -707,7 +725,7 @@ async function playVideo(idx, item) {
   color: var(--text-primary);
   font-weight: 500;
   text-align: right;
-  max-width: 60%;
+  max-width: 80%;
   word-break: break-all;
 }
 
