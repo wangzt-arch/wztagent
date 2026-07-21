@@ -32,12 +32,39 @@
       <p class="empty-hint">去创作页面生成你的第一张图片/视频吧！</p>
     </div>
 
-    <div v-else class="gallery-grid">
-      <div
-        v-for="(item, idx) in store.galleryItems.value"
-        :key="item.id || idx"
-        class="gallery-item"
-      >
+    <template v-else>
+      <div class="category-tabs">
+        <button
+          v-for="cat in categories"
+          :key="cat.key"
+          class="category-tab"
+          :class="{ active: activeCategory === cat.key }"
+          @click="activeCategory = cat.key"
+        >
+          <svg v-if="cat.icon === 'all'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/>
+          </svg>
+          <svg v-else-if="cat.icon === 'image'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+          </svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+          </svg>
+          {{ cat.label }}
+          <span class="count">{{ cat.count }}</span>
+        </button>
+      </div>
+
+      <div v-if="filteredGalleryItems.length === 0" class="empty-gallery empty-category">
+        <p>当前分类下没有作品</p>
+      </div>
+
+      <div v-else class="gallery-grid">
+        <div
+          v-for="(item, idx) in filteredGalleryItems"
+          :key="item.id || idx"
+          class="gallery-item"
+        >
         <div class="gallery-media" :class="'media-' + item.type">
           <img
             v-if="item.mediaUrl && item.type.includes('image')"
@@ -55,7 +82,14 @@
             @ended="onVideoEnded"
             @click.stop
           ></video>
-          <div class="media-placeholder" v-if="item.type.includes('video') && (item.status !== 'completed' || (!item.mediaUrl && loadingIdx !== idx))">
+          <video
+            v-else-if="item.type.includes('video') && item.status === 'completed' && item.mediaUrl && playingIdx !== idx"
+            :src="item.mediaUrl + '#t=0.1'"
+            preload="metadata"
+            muted
+            class="poster-video"
+          ></video>
+          <div class="media-placeholder" v-if="item.type.includes('video') && (item.status !== 'completed' || (!item.mediaUrl && loadingIdx !== idx && playingIdx !== idx))">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
             </svg>
@@ -110,7 +144,8 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </template>
 
     <div v-if="statusDetail" class="status-modal" @click="statusDetail = null">
       <div class="modal-content" @click.stop>
@@ -163,7 +198,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '../../composables/useAppStore.js'
 
 const store = useAppStore()
@@ -171,6 +206,38 @@ const statusDetail = ref(null)
 const playingIdx = ref(-1)
 const loadingIdx = ref(-1)
 const currentVideoUrl = ref('')
+
+/** 进入画廊时：1. 刷新一次状态 2. 启动轮询 */
+onMounted(() => {
+  store.refreshGalleryStatuses()
+  store.startGalleryPolling()
+})
+
+/** 离开画廊时：停止所有轮询 */
+onUnmounted(() => {
+  store.stopAllPolling()
+})
+
+/** 当前激活的分类：all | image | video */
+const activeCategory = ref('all')
+
+/** 画廊分类配置（带数量统计） */
+const categories = computed(() => {
+  const items = store.galleryItems.value
+  return [
+    { key: 'all', label: '全部', icon: 'all', count: items.length },
+    { key: 'image', label: '图片', icon: 'image', count: items.filter(i => i.type.includes('image')).length },
+    { key: 'video', label: '视频', icon: 'video', count: items.filter(i => i.type.includes('video')).length }
+  ]
+})
+
+/** 按当前分类过滤后的画廊列表 */
+const filteredGalleryItems = computed(() => {
+  const items = store.galleryItems.value
+  if (activeCategory.value === 'image') return items.filter(i => i.type.includes('image'))
+  if (activeCategory.value === 'video') return items.filter(i => i.type.includes('video'))
+  return items
+})
 
 const hasGeneratingItems = computed(() => {
   return store.galleryItems.value.some(item => item.status === 'generating' && item.taskId)
@@ -230,6 +297,69 @@ async function playVideo(idx, item) {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.category-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.35rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  width: fit-content;
+  flex-wrap: wrap;
+}
+
+.category-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-md) - 4px);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-input);
+}
+
+.category-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border-color: var(--border-active);
+  box-shadow: 0 0 0 1px var(--border-active), 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.category-tab .count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.25rem;
+  padding: 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--bg-input);
+  border-radius: 999px;
+  color: var(--text-muted);
+  transition: all 0.25s ease;
+}
+
+.category-tab.active .count {
+  background: var(--accent-purple);
+  color: #fff;
+}
+
+.empty-category {
+  padding: 4rem 2rem;
 }
 
 .header-title h2 {
@@ -449,6 +579,13 @@ async function playVideo(idx, item) {
 
 .gallery-media video {
   cursor: pointer;
+}
+
+.poster-video {
+  pointer-events: none;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
 }
 
 .overlay-spinner {

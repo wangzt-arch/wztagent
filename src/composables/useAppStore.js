@@ -279,7 +279,7 @@ async function generateVideoWrapper() {
     addToGallery(type, null, videoPrompt.value || motionPrompt.value, taskId, 'generating')
 
     progressText.value = '任务已创建，等待生成...'
-    startPolling(taskId, type)
+    isGenerating.value = false
 
   } catch (err) {
     console.error(err)
@@ -289,26 +289,18 @@ async function generateVideoWrapper() {
 }
 
 /**
- * 轮询视频任务状态
+ * 启动单个任务的轮询（不影响进度条，仅更新画廊状态）
  * @param {string} taskId - 任务 ID
- * @param {string} type - 任务类型
  */
-function startPolling(taskId, type) {
-  if (pollTimer) clearInterval(pollTimer)
+function startPolling(taskId) {
+  if (pollIntervals[taskId]) return
 
   const poll = async () => {
     try {
       const data = await getVideoStatus(taskId)
 
-      // 任务完成
       if (data.status === 'completed' || data.output?.video_url) {
-        stopPolling()
-        isGenerating.value = false
-        progressWidth.value = 100
-        progressText.value = '生成完成！'
-        generatedVideo.value = true
-        generatedVideoUrl.value = data.output?.video_url || data.video_url
-
+        stopPolling(taskId)
         const item = galleryItems.value.find(i => i.taskId === taskId)
         if (item) {
           item.mediaUrl = data.output?.video_url || data.video_url
@@ -318,50 +310,49 @@ function startPolling(taskId, type) {
         return
       }
 
-      // 任务失败
       if (data.status === 'failed') {
-        stopPolling()
-        isGenerating.value = false
-        errorMsg.value = data.error?.message || '生成失败'
-
+        stopPolling(taskId)
         const item = galleryItems.value.find(i => i.taskId === taskId)
         if (item) { item.status = 'failed'; saveGallery() }
         return
       }
 
-      // 更新进度（基于时间估算）
-      const elapsed = Date.now() - (data.created_at ? new Date(data.created_at).getTime() : Date.now() - 60000)
-      progressWidth.value = Math.min(90, (elapsed / 600000) * 100)
-
-      if (elapsed < 60000) progressText.value = '排队中...'
-      else if (elapsed < 180000) progressText.value = '生成中...'
-      else progressText.value = '即将完成...'
-
     } catch (err) {
-      console.warn('Poll error:', err.message)
+      console.warn('Poll error:', taskId, err.message)
     }
   }
 
   poll()
-  pollTimer = setInterval(poll, 5000)
-
-  // 30 分钟后提示用户保持页面打开
-  setTimeout(() => {
-    if (isGenerating.value && pollTimer) {
-      progressText.value = '仍在生成中，请保持页面打开...'
-    }
-  }, 1800000)
+  pollIntervals[taskId] = setInterval(poll, 5000)
 }
 
-/** 停止轮询 */
-function stopPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+/**
+ * 停止单个任务的轮询
+ * @param {string} taskId - 任务 ID
+ */
+function stopPolling(taskId) {
+  if (pollIntervals[taskId]) {
+    clearInterval(pollIntervals[taskId])
+    delete pollIntervals[taskId]
+  }
 }
 
 /** 停止所有轮询 */
 function stopAllPolling() {
-  Object.values(pollIntervals).forEach(clearInterval)
-  stopPolling()
+  Object.keys(pollIntervals).forEach(taskId => {
+    clearInterval(pollIntervals[taskId])
+  })
+  pollIntervals = {}
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+
+/** 启动画廊中所有生成中任务的轮询 */
+function startGalleryPolling() {
+  galleryItems.value.forEach(item => {
+    if (item.status === 'generating' && item.taskId) {
+      startPolling(item.taskId)
+    }
+  })
 }
 
 /**
@@ -652,6 +643,7 @@ export function useAppStore() {
     startPolling,
     stopPolling,
     stopAllPolling,
+    startGalleryPolling,
     addToGallery,
     saveGallery,
     clearGallery,
