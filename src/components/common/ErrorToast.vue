@@ -1,15 +1,18 @@
 <template>
   <Transition name="slide-in">
-    <div v-if="errorMsg" class="error-toast" @click="$emit('dismiss')">
-      <div class="error-card">
+    <div v-if="errorMsg || successMsg" class="error-toast" @click="$emit('dismiss')">
+      <div class="error-card" :class="{ success: successMsg }">
         <div class="error-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg v-if="errorMsg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+          </svg>
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
           </svg>
         </div>
         <div class="error-content">
-          <h4>出错了</h4>
-          <p>{{ errorMsg }}</p>
+          <h4>{{ errorMsg ? '出错了' : '成功' }}</h4>
+          <p>{{ errorMsg || successMsg }}</p>
         </div>
         <button class="error-close" @click.stop="$emit('dismiss')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -22,7 +25,10 @@
 </template>
 
 <script setup>
-defineProps({ errorMsg: String })
+defineProps({ 
+  errorMsg: String,
+  successMsg: String
+})
 defineEmits(['dismiss'])
 </script>
 
@@ -49,6 +55,11 @@ defineEmits(['dismiss'])
   backdrop-filter: blur(12px);
 }
 
+.error-card.success {
+  border-color: rgba(34, 197, 94, 0.3);
+  box-shadow: var(--shadow-lg), 0 0 30px rgba(34, 197, 94, 0.08);
+}
+
 .error-icon {
   flex-shrink: 0;
   width: 36px;
@@ -61,6 +72,11 @@ defineEmits(['dismiss'])
   justify-content: center;
 }
 
+.error-card.success .error-icon {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
 .error-content {
   flex: 1;
   min-width: 0;
@@ -71,6 +87,10 @@ defineEmits(['dismiss'])
   font-weight: 600;
   color: var(--danger);
   margin-bottom: 0.25rem;
+}
+
+.error-card.success .error-content h4 {
+  color: #22c55e;
 }
 
 .error-content p {

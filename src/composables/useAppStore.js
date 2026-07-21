@@ -51,8 +51,12 @@ const videoNegPrompt = ref('')
 
 // ==================== 生成过程状态 ====================
 
-/** 是否正在生成 */
-const isGenerating = ref(false)
+/** 是否正在生成图片 */
+const isImageGenerating = ref(false)
+/** 是否正在生成视频 */
+const isVideoGenerating = ref(false)
+/** 是否正在生成（兼容旧逻辑）*/
+const isGenerating = computed(() => isImageGenerating.value || isVideoGenerating.value)
 /** 进度条宽度百分比 */
 const progressWidth = ref(0)
 /** 进度提示文字 */
@@ -71,6 +75,8 @@ const generatedVideoUrl = ref(null)
 const currentTaskId = ref(null)
 /** 错误消息 */
 const errorMsg = ref('')
+/** 提示消息 */
+const toastMsg = ref('')
 
 // ==================== API 配置状态 ====================
 
@@ -203,7 +209,7 @@ async function generateImageWrapper() {
   if (imageMode.value === 'txt2img' && !imagePrompt.value.trim()) { errorMsg.value = '请输入提示词'; return }
   if (imageMode.value === 'img2img' && !refImageUrl.value && !refImagePreview.value) { errorMsg.value = '请提供参考图片'; return }
 
-  isGenerating.value = true
+  isImageGenerating.value = true
   progressWidth.value = 0
   progressText.value = '正在生成图片...'
   errorMsg.value = ''
@@ -237,7 +243,7 @@ async function generateImageWrapper() {
     errorMsg.value = err.message
   } finally {
     stopProgressSimulation()
-    isGenerating.value = false
+    isImageGenerating.value = false
   }
 }
 
@@ -250,7 +256,7 @@ async function generateVideoWrapper() {
   if (videoMode.value === 'txt2vid' && !videoPrompt.value.trim()) { errorMsg.value = '请输入视频描述'; return }
   if (videoMode.value === 'img2vid' && !videoRefUrl.value && !vidImagePreview.value) { errorMsg.value = '请提供参考图片'; return }
 
-  isGenerating.value = true
+  isVideoGenerating.value = true
   progressWidth.value = 0
   progressText.value = '正在创建任务...'
   errorMsg.value = ''
@@ -278,13 +284,15 @@ async function generateVideoWrapper() {
     const type = videoMode.value === 'txt2vid' ? 'text-to-video' : 'image-to-video'
     addToGallery(type, null, videoPrompt.value || motionPrompt.value, taskId, 'generating')
 
-    progressText.value = '任务已创建，等待生成...'
-    isGenerating.value = false
+    progressText.value = '任务已创建，去画廊查看进度'
+    toastMsg.value = '任务已创建，进度将在画廊中显示'
+    setTimeout(() => { toastMsg.value = '' }, 3000)
+    isVideoGenerating.value = false
 
   } catch (err) {
     console.error(err)
     errorMsg.value = err.message
-    isGenerating.value = false
+    isVideoGenerating.value = false
   }
 }
 
@@ -341,8 +349,8 @@ function stopPolling(taskId) {
 function stopAllPolling() {
   Object.keys(pollIntervals).forEach(taskId => {
     clearInterval(pollIntervals[taskId])
+    delete pollIntervals[taskId]
   })
-  pollIntervals = {}
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
 }
 
@@ -619,6 +627,9 @@ export function useAppStore() {
     generatedVideoUrl,
     currentTaskId,
     errorMsg,
+    toastMsg,
+    isImageGenerating,
+    isVideoGenerating,
     // API 配置
     apiKey,
     baseUrl,

@@ -12,15 +12,7 @@
 
     <AppFooter />
 
-    <ProgressOverlay
-      :is-generating="store.isGenerating.value"
-      :progress-width="store.progressWidth.value"
-      :progress-text="store.progressText.value"
-      :generation-title="store.generationTitle.value"
-      :current-task-id="store.currentTaskId.value"
-    />
-
-    <ErrorToast :error-msg="store.errorMsg.value" @dismiss="store.errorMsg.value = ''" />
+    <ErrorToast :error-msg="store.errorMsg.value" :success-msg="store.toastMsg.value" @dismiss="store.errorMsg.value = ''; store.toastMsg.value = ''" />
 
     <Lightbox
       :lightbox-idx="store.lightboxIdx.value"
@@ -38,7 +30,6 @@ import AppFooter from './components/layout/AppFooter.vue'
 import CreateTab from './components/tabs/CreateTab.vue'
 import GalleryTab from './components/tabs/GalleryTab.vue'
 import SettingsTab from './components/tabs/SettingsTab.vue'
-import ProgressOverlay from './components/common/ProgressOverlay.vue'
 import ErrorToast from './components/common/ErrorToast.vue'
 import Lightbox from './components/common/Lightbox.vue'
 

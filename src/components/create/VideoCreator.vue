@@ -80,15 +80,15 @@
             </div>
           </div>
 
-          <button class="btn-primary" @click="store.generateVideo" :disabled="store.isGenerating.value">
+          <button class="btn-primary" @click="store.generateVideo" :disabled="store.isVideoGenerating.value">
             <span class="btn-content">
-              <svg v-if="!store.isGenerating.value" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg v-if="!store.isVideoGenerating.value" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
               </svg>
               <svg v-else class="spin-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
               </svg>
-              {{ store.isGenerating.value ? '生成中...' : '生成视频' }}
+              {{ store.isVideoGenerating.value ? '生成中...' : '生成视频' }}
             </span>
           </button>
         </div>
@@ -106,6 +106,20 @@
                 </svg>
                 下载
               </button>
+            </div>
+          </div>
+          <div v-else-if="store.isVideoGenerating.value" key="loading" class="preview-card preview-loading">
+            <div class="loading-content">
+              <div class="loading-spinner-wrap">
+                <div class="loading-spinner"></div>
+                <div class="loading-ring"></div>
+              </div>
+              <p class="loading-title">{{ store.progressText.value }}</p>
+              <div class="loading-bar">
+                <div class="loading-fill" :style="{ width: store.progressWidth.value + '%' }">
+                  <div class="loading-glow"></div>
+                </div>
+              </div>
             </div>
           </div>
           <div v-else key="empty" class="preview-empty">
@@ -237,6 +251,83 @@ const durationOptions = [
 .preview-hint {
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+.preview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 420px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+.loading-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-spinner-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1.5rem;
+}
+
+.loading-spinner {
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent-purple);
+  border-right-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-ring {
+  position: absolute;
+  inset: -5px;
+  border: 1px solid transparent;
+  border-top-color: rgba(124, 58, 237, 0.2);
+  border-radius: 50%;
+  animation: spin 2.5s linear infinite reverse;
+}
+
+.loading-title {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+.loading-bar {
+  width: 100%;
+  max-width: 240px;
+  height: 4px;
+  background: var(--bg-input);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.loading-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 2px;
+  position: relative;
+}
+
+.loading-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: progress-shimmer 1.5s infinite;
+}
+
+@keyframes progress-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .btn-content {
