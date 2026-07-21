@@ -70,14 +70,14 @@
           >
             <div class="gallery-media" :class="'media-' + item.type">
               <img
-                v-if="item.mediaUrl && item.type.includes('image') && item.status === 'completed'"
+                v-if="item.mediaUrl && item.type.endsWith('-image') && item.status === 'completed'"
                 :src="item.mediaUrl"
                 alt=""
                 @click="store.openLightbox(idx)"
                 loading="lazy"
               >
               <video
-                v-else-if="item.type.includes('video') && item.status === 'completed' && playingIdx === idx && currentVideoUrl"
+                v-else-if="item.type.endsWith('-video') && item.status === 'completed' && playingIdx === idx && currentVideoUrl"
                 :src="currentVideoUrl"
                 controls
                 autoplay
@@ -86,14 +86,14 @@
                 @click.stop
               ></video>
               <video
-                v-else-if="item.type.includes('video') && item.status === 'completed' && item.mediaUrl && playingIdx !== idx"
+                v-else-if="item.type.endsWith('-video') && item.status === 'completed' && item.mediaUrl && playingIdx !== idx"
                 :src="item.mediaUrl + '#t=0.1'"
                 preload="metadata"
                 muted
                 class="poster-video"
               ></video>
               <div class="media-placeholder" v-else>
-                <svg v-if="item.type.includes('image')" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg v-if="item.type.endsWith('-image')" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                   <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                 </svg>
                 <svg v-else width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -108,7 +108,7 @@
                 <span class="overlay-spinner"></span>
                 <span class="overlay-text">加载中...</span>
               </div>
-              <div v-if="item.type.includes('video') && item.status === 'completed' && playingIdx !== idx && loadingIdx !== idx" class="play-overlay" @click="playVideo(idx, item)">
+              <div v-if="item.type.endsWith('-video') && item.status === 'completed' && playingIdx !== idx && loadingIdx !== idx" class="play-overlay" @click="playVideo(idx, item)">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
                   <circle cx="12" cy="12" r="12" fill="rgba(0,0,0,0.5)"/>
                   <path d="M8 5v14l11-7z" fill="white"/>
@@ -233,16 +233,16 @@ const categories = computed(() => {
   const items = store.galleryItems.value
   return [
     { key: 'all', label: '全部', icon: 'all', count: items.length },
-    { key: 'image', label: '图片', icon: 'image', count: items.filter(i => i.type.includes('image')).length },
-    { key: 'video', label: '视频', icon: 'video', count: items.filter(i => i.type.includes('video')).length }
+    { key: 'image', label: '图片', icon: 'image', count: items.filter(i => i.type.endsWith('-image')).length },
+    { key: 'video', label: '视频', icon: 'video', count: items.filter(i => i.type.endsWith('-video')).length }
   ]
 })
 
 /** 按当前分类过滤后的画廊列表 */
 const filteredGalleryItems = computed(() => {
   const items = store.galleryItems.value
-  if (activeCategory.value === 'image') return items.filter(i => i.type.includes('image'))
-  if (activeCategory.value === 'video') return items.filter(i => i.type.includes('video'))
+  if (activeCategory.value === 'image') return items.filter(i => i.type.endsWith('-image'))
+  if (activeCategory.value === 'video') return items.filter(i => i.type.endsWith('-video'))
   return items
 })
 
