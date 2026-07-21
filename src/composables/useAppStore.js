@@ -1,114 +1,162 @@
+/**
+ * 应用状态管理 Store
+ * 使用 Vue 3 Composition API 的组合式函数模式
+ * 负责管理全局状态、业务逻辑和用户交互
+ */
 import { ref, computed, watch } from 'vue'
+import { setApiKey, setBaseUrl, generateImage, testConnection, createVideo, getVideoStatus, getVideoUrl } from '../api/index.js'
 
-const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV
+// ==================== 导航状态 ====================
 
-function getApiBaseUrl() {
-  if (isDev) return '/api'
-  return baseUrl.value || 'https://apihub.agnes-ai.com/v1'
-}
-
-async function fetchWithRetry(url, options, { maxRetries = 3, onRetry } = {}) {
-  let lastError
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const res = await fetch(url, options)
-      if (res.ok) return res
-
-      const isRetryable = res.status === 503 || res.status === 502 || res.status === 504 || res.status === 429
-      if (!isRetryable || attempt === maxRetries) {
-        return res
-      }
-
-      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
-      if (onRetry) onRetry(attempt + 1, maxRetries, res.status)
-      await new Promise(r => setTimeout(r, delay))
-    } catch (err) {
-      lastError = err
-      if (attempt === maxRetries) throw err
-      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
-      if (onRetry) onRetry(attempt + 1, maxRetries, 'network')
-      await new Promise(r => setTimeout(r, delay))
-    }
-  }
-  throw lastError || new Error('Max retries exceeded')
-}
-
+/** 当前选中的标签页：create | gallery | settings */
 const currentTab = ref('create')
+/** 当前媒体类型：image | video */
 const mediaType = ref('image')
+/** 图片生成模式：txt2img | img2img */
 const imageMode = ref('txt2img')
+/** 视频生成模式：txt2vid | img2vid */
 const videoMode = ref('txt2vid')
 
-// Image state
+// ==================== 图片生成状态 ====================
+
+/** 图片提示词 */
 const imagePrompt = ref('')
+/** 图生图参考图片 URL */
 const refImageUrl = ref('')
+/** 参考图片预览（base64）*/
 const refImagePreview = ref(null)
+/** 图生图编辑提示词 */
 const editPrompt = ref('')
+/** 图片尺寸 */
 const imageSize = ref('1024x1024')
+/** 负面提示词 */
 const negativePrompt = ref('')
 
-// Video state
+// ==================== 视频生成状态 ====================
+
+/** 视频提示词 */
 const videoPrompt = ref('')
+/** 图生视频参考图片 URL */
 const videoRefUrl = ref('')
+/** 视频参考图片预览（base64）*/
 const vidImagePreview = ref(null)
+/** 运动提示词 */
 const motionPrompt = ref('')
+/** 视频帧数 */
 const videoDuration = ref('121')
+/** 视频帧率 */
 const videoFps = ref(24)
+/** 视频负面提示词 */
 const videoNegPrompt = ref('')
 
-// Generation state
+// ==================== 生成过程状态 ====================
+
+/** 是否正在生成 */
 const isGenerating = ref(false)
+/** 进度条宽度百分比 */
 const progressWidth = ref(0)
+/** 进度提示文字 */
 const progressText = ref('准备中...')
+/** 生成标题 */
 const generationTitle = ref('生成中...')
+/** 图片是否生成完成 */
 const generatedImage = ref(false)
+/** 生成的图片 URL */
 const generatedImageUrl = ref(null)
+/** 视频是否生成完成 */
 const generatedVideo = ref(false)
+/** 生成的视频 URL */
 const generatedVideoUrl = ref(null)
+/** 当前任务 ID */
 const currentTaskId = ref(null)
+/** 错误消息 */
 const errorMsg = ref('')
 
-// API state
+// ==================== API 配置状态 ====================
+
+/** API Key */
 const apiKey = ref('')
+/** API 基础地址 */
 const baseUrl = ref('https://apihub.agnes-ai.com/v1')
+/** 当前模型名称 */
 const modelName = ref('agnes-image-2.1-flash')
+/** 当前模型类型 */
 const modelType = ref('image')
+/** 连接状态：'' | 'ok' | 'error' */
 const connStatus = ref('')
 
-// Gallery state
+// ==================== 画廊状态 ====================
+
+/** 画廊作品列表 */
 const galleryItems = ref([])
+/** Lightbox 索引（-1 表示关闭）*/
 const lightboxIdx = ref(-1)
 
-// Polling
+// ==================== 定时器引用 ====================
+
+/** 轮询定时器 */
 let pollTimer = null
+/** 轮询间隔映射 */
 const pollIntervals = {}
+/** 进度模拟定时器 */
 let progressTimer = null
 
+// ==================== 监听与初始化 ====================
+
+/**
+ * 监听媒体类型变化，自动切换模型名称
+ */
 watch(mediaType, (newVal) => {
   if (newVal === 'image') modelName.value = 'agnes-image-2.1-flash'
   else modelName.value = 'agnes-video-v2.0'
 })
 
+/**
+ * 加载用户设置
+ * 从 localStorage 恢复 API Key、基础地址和画廊数据
+ * 同时初始化 API 客户端配置
+ */
 function loadSettings() {
   apiKey.value = localStorage.getItem('agnes_api_key') || 'sk-Sf7UT27WPfgTY0n3lE3mpN1prY0XX2sbn8Zt0tMkXsC6Eu8H'
   baseUrl.value = localStorage.getItem('agnes_base_url') || 'https://apihub.agnes-ai.com/v1'
   galleryItems.value = JSON.parse(localStorage.getItem('agnes_gallery') || '[]')
+  setApiKey(apiKey.value)
+  setBaseUrl(baseUrl.value)
 }
 
+/**
+ * 保存设置到 localStorage
+ * @param {string} key - 设置项：api_key | base_url
+ */
 function saveSetting(key) {
-  if (key === 'api_key') localStorage.setItem('agnes_api_key', apiKey.value || '')
-  if (key === 'base_url') localStorage.setItem('agnes_base_url', baseUrl.value || '')
+  if (key === 'api_key') {
+    localStorage.setItem('agnes_api_key', apiKey.value || '')
+    setApiKey(apiKey.value)
+  }
+  if (key === 'base_url') {
+    localStorage.setItem('agnes_base_url', baseUrl.value || '')
+    setBaseUrl(baseUrl.value)
+  }
 }
 
-async function testConnection() {
+/**
+ * 测试 API 连接状态
+ * 调用 /models 接口验证 API Key 是否有效
+ */
+async function _testConnection() {
   if (!apiKey.value) { connStatus.value = 'error'; return }
   try {
-    const res = await fetch(getApiBaseUrl() + '/models', {
-      headers: { Authorization: 'Bearer ' + apiKey.value }
-    })
-    connStatus.value = res.ok ? 'ok' : 'error'
+    connStatus.value = await testConnection() ? 'ok' : 'error'
   } catch { connStatus.value = 'error' }
 }
 
+// ==================== 文件上传处理 ====================
+
+/**
+ * 处理文件上传（input change 事件）
+ * @param {Event} e - 事件对象
+ * @param {Ref} propRef - 目标响应式引用
+ */
 function _handleUpload(e, propRef) {
   const file = e.target.files[0]
   if (!file) return
@@ -117,6 +165,11 @@ function _handleUpload(e, propRef) {
   reader.readAsDataURL(file)
 }
 
+/**
+ * 处理文件拖拽上传
+ * @param {DragEvent} e - 拖拽事件对象
+ * @param {Ref} propRef - 目标响应式引用
+ */
 function _handleDrop(e, propRef) {
   const file = e.dataTransfer.files[0]
   if (!file || !file.type.startsWith('image/')) return
@@ -125,15 +178,27 @@ function _handleDrop(e, propRef) {
   reader.readAsDataURL(file)
 }
 
+/** 处理参考图片上传 */
 function handleRefImageUpload(e) { _handleUpload(e, refImagePreview) }
+/** 处理视频参考图片上传 */
 function handleVidImageUpload(e) { _handleUpload(e, vidImagePreview) }
+/** 处理参考图片拖拽 */
 function handleRefImageDrop(e) { _handleDrop(e, refImagePreview) }
+/** 处理视频参考图片拖拽 */
 function handleVidImageDrop(e) { _handleDrop(e, vidImagePreview) }
 
+/** 移除参考图片 */
 function removeRefImage() { refImagePreview.value = null; refImageUrl.value = '' }
+/** 移除视频参考图片 */
 function removeVidImage() { vidImagePreview.value = null; videoRefUrl.value = '' }
 
-async function generateImage() {
+// ==================== 生成逻辑 ====================
+
+/**
+ * 生成图片（封装函数）
+ * 包含表单验证、状态管理、API 调用和结果处理
+ */
+async function generateImageWrapper() {
   if (!apiKey.value) { errorMsg.value = '请先在设置中配置 API Key'; return }
   if (imageMode.value === 'txt2img' && !imagePrompt.value.trim()) { errorMsg.value = '请输入提示词'; return }
   if (imageMode.value === 'img2img' && !refImageUrl.value && !refImagePreview.value) { errorMsg.value = '请提供参考图片'; return }
@@ -157,50 +222,16 @@ async function generateImage() {
       if (editPrompt.value) body.prompt = editPrompt.value
     }
 
-    const res = await fetchWithRetry(
-      getApiBaseUrl() + '/images/generations',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + apiKey.value,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      },
-      {
-        onRetry: (attempt, max, status) => {
-          progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
-        }
-      }
-    )
+    const url = await generateImage(body, (attempt, max, status) => {
+      progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
+    })
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.error?.message || `HTTP ${res.status}`)
-    }
-
-    const data = await res.json()
-    let url = null
-    if (data.data?.[0]?.url) {
-      url = data.data[0].url
-    } else if (data.data?.[0]?.b64_json) {
-      url = 'data:image/png;base64,' + data.data[0].b64_json
-    } else if (data.url) {
-      url = data.url
-    } else if (data.output_url) {
-      url = data.output_url
-    }
-
-    if (url) {
-      progressWidth.value = 100
-      progressText.value = '生成完成！'
-      generatedImage.value = true
-      generatedImageUrl.value = url
-      const galleryType = imageMode.value === 'img2img' ? 'image-to-image' : 'text-to-image'
-      addToGallery(galleryType, url, imagePrompt.value || editPrompt.value, null, 'completed')
-    } else {
-      throw new Error('未获取到图片 URL')
-    }
+    progressWidth.value = 100
+    progressText.value = '生成完成！'
+    generatedImage.value = true
+    generatedImageUrl.value = url
+    const galleryType = imageMode.value === 'img2img' ? 'image-to-image' : 'text-to-image'
+    addToGallery(galleryType, url, imagePrompt.value || editPrompt.value, null, 'completed')
   } catch (err) {
     console.error(err)
     errorMsg.value = err.message
@@ -210,7 +241,11 @@ async function generateImage() {
   }
 }
 
-async function generateVideo() {
+/**
+ * 生成视频（封装函数）
+ * 包含表单验证、状态管理、API 调用和轮询处理
+ */
+async function generateVideoWrapper() {
   if (!apiKey.value) { errorMsg.value = '请先在设置中配置 API Key'; return }
   if (videoMode.value === 'txt2vid' && !videoPrompt.value.trim()) { errorMsg.value = '请输入视频描述'; return }
   if (videoMode.value === 'img2vid' && !videoRefUrl.value && !vidImagePreview.value) { errorMsg.value = '请提供参考图片'; return }
@@ -234,36 +269,17 @@ async function generateVideo() {
       body.image = videoRefUrl.value || vidImagePreview.value
     }
 
-    const res = await fetchWithRetry(
-      getApiBaseUrl() + '/videos',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + apiKey.value,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      },
-      {
-        onRetry: (attempt, max, status) => {
-          progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
-        }
-      }
-    )
+    const taskId = await createVideo(body, (attempt, max, status) => {
+      progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
+    })
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.error?.message || `HTTP ${res.status}`)
-    }
-
-    const data = await res.json()
-    currentTaskId.value = data.id || data.task_id
+    currentTaskId.value = taskId
 
     const type = videoMode.value === 'txt2vid' ? 'text-to-video' : 'image-to-video'
-    addToGallery(type, null, videoPrompt.value || motionPrompt.value, currentTaskId.value, 'generating')
+    addToGallery(type, null, videoPrompt.value || motionPrompt.value, taskId, 'generating')
 
     progressText.value = '任务已创建，等待生成...'
-    startPolling(currentTaskId.value, type)
+    startPolling(taskId, type)
 
   } catch (err) {
     console.error(err)
@@ -272,20 +288,19 @@ async function generateVideo() {
   }
 }
 
+/**
+ * 轮询视频任务状态
+ * @param {string} taskId - 任务 ID
+ * @param {string} type - 任务类型
+ */
 function startPolling(taskId, type) {
   if (pollTimer) clearInterval(pollTimer)
 
   const poll = async () => {
     try {
-      const res = await fetchWithRetry(
-        getApiBaseUrl() + '/videos/' + taskId,
-        { headers: { Authorization: 'Bearer ' + apiKey.value } },
-        { maxRetries: 2 }
-      )
-      if (!res.ok) throw new Error('HTTP ' + res.status)
+      const data = await getVideoStatus(taskId)
 
-      const data = await res.json()
-
+      // 任务完成
       if (data.status === 'completed' || data.output?.video_url) {
         stopPolling()
         isGenerating.value = false
@@ -303,6 +318,7 @@ function startPolling(taskId, type) {
         return
       }
 
+      // 任务失败
       if (data.status === 'failed') {
         stopPolling()
         isGenerating.value = false
@@ -313,6 +329,7 @@ function startPolling(taskId, type) {
         return
       }
 
+      // 更新进度（基于时间估算）
       const elapsed = Date.now() - (data.created_at ? new Date(data.created_at).getTime() : Date.now() - 60000)
       progressWidth.value = Math.min(90, (elapsed / 600000) * 100)
 
@@ -328,6 +345,7 @@ function startPolling(taskId, type) {
   poll()
   pollTimer = setInterval(poll, 5000)
 
+  // 30 分钟后提示用户保持页面打开
   setTimeout(() => {
     if (isGenerating.value && pollTimer) {
       progressText.value = '仍在生成中，请保持页面打开...'
@@ -335,15 +353,21 @@ function startPolling(taskId, type) {
   }, 1800000)
 }
 
+/** 停止轮询 */
 function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
 }
 
+/** 停止所有轮询 */
 function stopAllPolling() {
   Object.values(pollIntervals).forEach(clearInterval)
   stopPolling()
 }
 
+/**
+ * 启动进度模拟（用于图片生成的视觉反馈）
+ * 8 秒内从 0% 递增到 90%
+ */
 function startProgressSimulation() {
   if (progressTimer) clearInterval(progressTimer)
   progressWidth.value = 0
@@ -363,6 +387,7 @@ function startProgressSimulation() {
   }, 200)
 }
 
+/** 停止进度模拟 */
 function stopProgressSimulation() {
   if (progressTimer) {
     clearInterval(progressTimer)
@@ -370,6 +395,16 @@ function stopProgressSimulation() {
   }
 }
 
+// ==================== 画廊管理 ====================
+
+/**
+ * 添加作品到画廊
+ * @param {string} type - 类型：text-to-image | image-to-image | text-to-video | image-to-video
+ * @param {string|null} mediaUrl - 媒体 URL
+ * @param {string} prompt - 提示词
+ * @param {string|null} taskId - 任务 ID（视频生成用）
+ * @param {string} [status] - 状态：generating | completed | failed
+ */
 function addToGallery(type, mediaUrl, prompt, taskId, status) {
   const item = {
     id: Date.now(),
@@ -384,10 +419,12 @@ function addToGallery(type, mediaUrl, prompt, taskId, status) {
   saveGallery()
 }
 
+/** 保存画廊到 localStorage */
 function saveGallery() {
   localStorage.setItem('agnes_gallery', JSON.stringify(galleryItems.value.slice(0, 100)))
 }
 
+/** 清空画廊 */
 function clearGallery() {
   if (confirm('确定清空所有作品？')) {
     galleryItems.value = []
@@ -395,16 +432,26 @@ function clearGallery() {
   }
 }
 
+/**
+ * 删除单个画廊作品
+ * @param {object} item - 作品对象
+ */
+function removeGalleryItem(item) {
+  const idx = galleryItems.value.findIndex(i => i.id === item.id)
+  if (idx !== -1) {
+    galleryItems.value.splice(idx, 1)
+    saveGallery()
+  }
+}
+
+/**
+ * 检查画廊作品状态（手动触发）
+ * @param {object} item - 作品对象
+ */
 async function checkGalleryItem(item) {
   if (!item.taskId) { alert('没有任务ID'); return }
   try {
-    const res = await fetchWithRetry(
-      getApiBaseUrl() + '/videos/' + item.taskId,
-      { headers: { Authorization: 'Bearer ' + apiKey.value } },
-      { maxRetries: 2 }
-    )
-    if (!res.ok) throw new Error('HTTP ' + res.status)
-    const data = await res.json()
+    const data = await getVideoStatus(item.taskId)
 
     if (data.status === 'completed' || data.output?.video_url) {
       item.mediaUrl = data.output?.video_url || data.video_url
@@ -426,44 +473,40 @@ async function checkGalleryItem(item) {
   }
 }
 
+/**
+ * 获取视频 URL（播放时调用）
+ * @param {object} item - 作品对象
+ * @returns {Promise<string|null>} 视频 URL
+ */
 async function fetchVideoUrl(item) {
   if (!item.taskId) return null
-  const res = await fetchWithRetry(
-    getApiBaseUrl() + '/videos/' + item.taskId,
-    { headers: { Authorization: 'Bearer ' + apiKey.value } },
-    { maxRetries: 2 }
-  )
-  if (!res.ok) throw new Error('HTTP ' + res.status)
-  const data = await res.json()
-  // const url = data.output?.video_url || data.video_url
-  const url= data?.metadata?.url
-  if (url) {
-    item.mediaUrl = url
-    item.status = 'completed'
-    saveGallery()
-    return url
-  }
-  if (data.status === 'failed') {
-    item.status = 'failed'
-    saveGallery()
+  try {
+    const url = await getVideoUrl(item.taskId)
+    if (url) {
+      item.mediaUrl = url
+      item.status = 'completed'
+      saveGallery()
+      return url
+    }
+    const data = await getVideoStatus(item.taskId)
+    if (data.status === 'failed') {
+      item.status = 'failed'
+      saveGallery()
+    }
+  } catch (err) {
+    console.warn('获取视频URL失败:', err.message)
   }
   return null
 }
 
+/** 批量刷新画廊中所有生成中作品的状态 */
 async function refreshGalleryStatuses() {
   const generatingItems = galleryItems.value.filter(item => item.status === 'generating' && item.taskId)
   if (generatingItems.length === 0) return
 
   for (const item of generatingItems) {
     try {
-      const res = await fetchWithRetry(
-        getApiBaseUrl() + '/videos/' + item.taskId,
-        { headers: { Authorization: 'Bearer ' + apiKey.value } },
-        { maxRetries: 2 }
-      )
-      if (!res.ok) continue
-
-      const data = await res.json()
+      const data = await getVideoStatus(item.taskId)
       if (data.status === 'completed' || data.output?.video_url) {
         item.mediaUrl = data.output?.video_url || data.video_url
         item.status = 'completed'
@@ -477,10 +520,14 @@ async function refreshGalleryStatuses() {
   saveGallery()
 }
 
+/** 恢复失败的画廊作品（重新检查状态）*/
 function resumeGalleryItem(item) {
   checkGalleryItem(item)
 }
 
+// ==================== 下载功能 ====================
+
+/** 下载生成的图片 */
 function downloadImage() {
   if (!generatedImageUrl.value) return
   const a = document.createElement('a')
@@ -490,6 +537,7 @@ function downloadImage() {
   a.click()
 }
 
+/** 下载生成的视频 */
 function downloadVideo() {
   if (!generatedVideoUrl.value) return
   const a = document.createElement('a')
@@ -499,40 +547,69 @@ function downloadVideo() {
   a.click()
 }
 
+/** 将生成的图片作为视频参考图使用 */
 function useAsReference() {
   mediaType.value = 'video'
   videoMode.value = 'img2vid'
   videoRefUrl.value = generatedImageUrl.value
 }
 
+// ==================== 工具函数 ====================
+
+/**
+ * 获取类型标签文本
+ * @param {string} type - 类型代码
+ * @returns {string} 中文标签
+ */
 function getTypeLabel(type) {
   const map = { 'text-to-video': '文生视频', 'image-to-video': '图生视频', 'image-to-image': '图生图', 'text-to-image': '文生图' }
   return map[type] || type
 }
 
+/**
+ * 获取状态标签文本
+ * @param {string} status - 状态代码
+ * @returns {string} 中文标签
+ */
 function getStatusLabel(status) {
   const map = { generating: '生成中', completed: '已完成', failed: '失败' }
   return map[status] || status
 }
 
+/**
+ * 格式化 ISO 时间字符串
+ * @param {string} iso - ISO 时间字符串
+ * @returns {string} 格式化后的时间
+ */
 function formatTime(iso) {
   return new Date(iso).toLocaleString('zh-CN', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
 }
 
+/**
+ * 打开 Lightbox
+ * @param {number} idx - 图片索引
+ */
 function openLightbox(idx) { lightboxIdx.value = idx }
 
+/**
+ * 导出 Store 接口
+ * 返回所有响应式状态和方法
+ */
 export function useAppStore() {
   return {
+    // 导航状态
     currentTab,
     mediaType,
     imageMode,
     videoMode,
+    // 图片状态
     imagePrompt,
     refImageUrl,
     refImagePreview,
     editPrompt,
     imageSize,
     negativePrompt,
+    // 视频状态
     videoPrompt,
     videoRefUrl,
     vidImagePreview,
@@ -540,6 +617,7 @@ export function useAppStore() {
     videoDuration,
     videoFps,
     videoNegPrompt,
+    // 生成状态
     isGenerating,
     progressWidth,
     progressText,
@@ -550,30 +628,34 @@ export function useAppStore() {
     generatedVideoUrl,
     currentTaskId,
     errorMsg,
+    // API 配置
     apiKey,
     baseUrl,
     modelName,
     modelType,
     connStatus,
+    // 画廊
     galleryItems,
     lightboxIdx,
+    // 方法
     loadSettings,
     saveSetting,
-    testConnection,
+    testConnection: _testConnection,
     handleRefImageUpload,
     handleVidImageUpload,
     handleRefImageDrop,
     handleVidImageDrop,
     removeRefImage,
     removeVidImage,
-    generateImage,
-    generateVideo,
+    generateImage: generateImageWrapper,
+    generateVideo: generateVideoWrapper,
     startPolling,
     stopPolling,
     stopAllPolling,
     addToGallery,
     saveGallery,
     clearGallery,
+    removeGalleryItem,
     checkGalleryItem,
     fetchVideoUrl,
     refreshGalleryStatuses,

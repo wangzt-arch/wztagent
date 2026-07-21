@@ -86,18 +86,26 @@
           </div>
           <p class="meta-prompt">{{ item.prompt || '无描述' }}</p>
           <span class="meta-time">{{ store.formatTime(item.createdAt) }}</span>
-          <div v-if="item.status === 'failed' && item.taskId" class="gallery-actions">
-            <button class="btn-secondary btn-sm" @click="store.resumeGalleryItem(item)">
+          <div class="gallery-actions">
+            <div v-if="item.status === 'failed' && item.taskId" class="action-group">
+              <button class="btn-secondary btn-sm" @click="store.resumeGalleryItem(item)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                </svg>
+                恢复
+              </button>
+              <button class="btn-secondary btn-sm" @click="store.checkGalleryItem(item)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                检查
+              </button>
+            </div>
+            <button class="btn-danger btn-sm delete-btn" @click="store.removeGalleryItem(item)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
               </svg>
-              恢复
-            </button>
-            <button class="btn-secondary btn-sm" @click="store.checkGalleryItem(item)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-              </svg>
-              检查
+              删除
             </button>
           </div>
         </div>
@@ -339,8 +347,19 @@ async function playVideo(idx, item) {
 
 .gallery-actions {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 0.375rem;
   margin-top: 0.5rem;
+}
+
+.action-group {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.delete-btn {
+  margin-left: auto;
 }
 
 .btn-sm {
