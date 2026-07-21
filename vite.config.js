@@ -6,6 +6,7 @@ export default defineConfig({
   base: './',
   server: {
     port: 3000,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'https://apihub.agnes-ai.com',

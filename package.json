@@ -1,12 +1,16 @@
 {
   "name": "agnes-video-agent",
   "version": "1.0.0",
-  "description": "Agnes Video v2.0 Agent - Pure Frontend Video Generation App",
+  "description": "创意工作室 - AI图像和视频生成工具",
+  "author": "Agnes AI",
   "type": "module",
+  "main": "src/electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "npm run build && node -e \"const fs=require('fs');['dist','release','build-output','CreativeStudio-win32-x64'].forEach(d=>{if(fs.existsSync(d))fs.rmSync(d,{recursive:true,force:true,maxRetries:5,retryDelay:100});})\" && npx electron-packager . CreativeStudio --platform=win32 --arch=x64 --out=dist --icon=src/images/cat.png --overwrite --asar"
   },
   "dependencies": {
     "marked": "^18.0.7",
@@ -14,6 +18,30 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
-    "vite": "^5.0.0"
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "electron-packager": "^17.1.2",
+    "vite": "^5.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.agnes.creator-studio",
+    "productName": "创意工作室",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "build/**/*",
+      "src/electron/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": "portable",
+      "icon": "src/images/cat.png",
+      "artifactName": "${productName}-${version}-${arch}.exe"
+    }
   }
 }
