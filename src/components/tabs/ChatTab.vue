@@ -79,8 +79,8 @@
                 <span class="role-label">{{ msg.role === 'user' ? '你' : 'Agnes' }}</span>
                 <span v-if="msg.role === 'assistant'" class="model-label">agnes-2.0-flash</span>
               </div>
-              <div class="message-body" v-html="formatMessage(msg.displayContent || msg.content)"></div>
-              <div v-if="msg.role === 'assistant' && store.chatLoading.value && idx === store.chatMessages.value.length - 1" class="typing-indicator">
+              <div class="message-body" v-html="renderMessage(msg, idx)"></div>
+              <div v-if="msg.role === 'assistant' && store.chatLoading.value && idx === store.chatMessages.value.length - 1 && !(msg.displayContent || msg.content)" class="typing-indicator">
                 <span class="typing-dot"></span>
                 <span class="typing-dot"></span>
                 <span class="typing-dot"></span>
@@ -112,7 +112,7 @@
               <svg v-else class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
               </svg>
-              {{ store.chatLoading.value ? '发送中...' : '发送' }}
+              {{ store.chatLoading.value ? '思考中...' : '发送' }}
             </button>
           </div>
         </div>
@@ -123,19 +123,43 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted } from 'vue'
+import { marked } from 'marked'
 import { useAppStore } from '../../composables/useAppStore.js'
 
 const store = useAppStore()
 const inputMessage = ref('')
 const messagesContainer = ref(null)
 
-function formatMessage(content) {
-  return content
-    .replace(/\n/g, '<br>')
-    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
-    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+// 配置 marked
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
+
+/**
+ * 渲染消息内容
+ * 推送中：简单文本（换行符转 br）
+ * 推送完成后：完整 Markdown 渲染
+ */
+function renderMessage(msg, idx) {
+  const content = msg.displayContent || msg.content
+  if (!content) return ''
+
+  const isLastAssistant = msg.role === 'assistant' && idx === store.chatMessages.value.length - 1
+  const isStreaming = isLastAssistant && store.chatLoading.value
+
+  if (isStreaming) {
+    // 推送中：简单文本显示，避免 Markdown 不完整导致渲染闪烁
+    return content.replace(/\n/g, '<br>')
+  }
+
+  // 推送完成：Markdown 渲染
+  if (msg.role === 'assistant') {
+    return marked.parse(content)
+  }
+
+  // 用户消息：简单文本
+  return content.replace(/\n/g, '<br>')
 }
 
 async function sendMessage() {
@@ -155,6 +179,17 @@ function scrollToBottom() {
   })
 }
 
+// 监听消息内容变化（推送过程中频繁更新）
+watch(() => {
+  const msgs = store.chatMessages.value
+  if (msgs.length === 0) return 0
+  const last = msgs[msgs.length - 1]
+  return (last.displayContent || last.content || '').length
+}, () => {
+  scrollToBottom()
+})
+
+// 监听消息数量变化
 watch(() => store.chatMessages.value.length, () => {
   scrollToBottom()
 })
@@ -478,6 +513,120 @@ onMounted(() => {
   color: #fff;
 }
 
+/* Markdown 渲染样式 */
+.message-body :deep(p) {
+  margin: 0.5rem 0;
+}
+
+.message-body :deep(p:first-child) {
+  margin-top: 0;
+}
+
+.message-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.message-body :deep(h1),
+.message-body :deep(h2),
+.message-body :deep(h3),
+.message-body :deep(h4) {
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.message-body :deep(h1) { font-size: 1.3rem; }
+.message-body :deep(h2) { font-size: 1.15rem; }
+.message-body :deep(h3) { font-size: 1.05rem; }
+
+.message-body :deep(ul),
+.message-body :deep(ol) {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.message-body :deep(li) {
+  margin: 0.25rem 0;
+}
+
+.message-body :deep(blockquote) {
+  border-left: 3px solid var(--accent-purple);
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0;
+  background: rgba(124, 58, 237, 0.05);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.message-body :deep(code) {
+  background: rgba(124, 58, 237, 0.15);
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+}
+
+.message-item.user :deep(code) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.message-body :deep(pre) {
+  background: var(--bg-primary);
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.message-body :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.message-body :deep(table) {
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
+.message-body :deep(th),
+.message-body :deep(td) {
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.message-body :deep(th) {
+  background: var(--bg-input);
+  font-weight: 600;
+}
+
+.message-body :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 1rem 0;
+}
+
+.message-body :deep(a) {
+  color: var(--accent-purple);
+  text-decoration: none;
+}
+
+.message-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.message-body :deep(strong) {
+  font-weight: 600;
+}
+
+.message-body :deep(img) {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+/* 旧的内联代码和代码块样式保留兼容 */
 .message-body :deep(code.inline-code) {
   background: rgba(124, 58, 237, 0.2);
   padding: 0.125rem 0.375rem;

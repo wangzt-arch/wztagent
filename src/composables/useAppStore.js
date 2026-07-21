@@ -775,7 +775,6 @@ async function sendMessage(text) {
     role: 'assistant',
     content: '',
     displayContent: '',
-    typewriterTimer: null,
     createdAt: new Date().toISOString()
   }
   session.messages.push(assistantMsg)
@@ -797,14 +796,10 @@ async function sendMessage(text) {
     }))
 
     await chat({ messages }, (chunk, fullContent) => {
-      // 通过 session.messages 索引访问，触发响应式更新
+      // SSE 流式期间，直接显示，不做打字机效果
       const reactiveMsg = session.messages[msgIndex]
       reactiveMsg.content = fullContent
-
-      // 只在第一次有内容时启动打字机定时器
-      if (!reactiveMsg.typewriterTimer && fullContent.length > 0) {
-        startTypewriter(session, msgIndex)
-      }
+      reactiveMsg.displayContent = fullContent
     })
   } catch (err) {
     console.error(err)
@@ -815,35 +810,8 @@ async function sendMessage(text) {
   } finally {
     chatLoading.value = false
     const reactiveMsg = session.messages[msgIndex]
-    if (reactiveMsg.typewriterTimer) {
-      const waitTimer = setInterval(() => {
-        if (!reactiveMsg.typewriterTimer) {
-          clearInterval(waitTimer)
-          reactiveMsg.displayContent = reactiveMsg.content
-          saveChatSessions()
-        }
-      }, 100)
-    } else {
-      reactiveMsg.displayContent = reactiveMsg.content
-      saveChatSessions()
-    }
-  }
-
-  /**
-   * 启动打字机效果
-   * 每 25ms 通过 reactive 引用增加 1 个字符
-   */
-  function startTypewriter(s, idx) {
-    const timer = setInterval(() => {
-      const m = s.messages[idx]
-      if (m.displayContent.length < m.content.length) {
-        m.displayContent = m.content.slice(0, m.displayContent.length + 1)
-      } else {
-        clearInterval(timer)
-        m.typewriterTimer = null
-      }
-    }, 25)
-    s.messages[idx].typewriterTimer = timer
+    reactiveMsg.displayContent = reactiveMsg.content
+    saveChatSessions()
   }
 }
 
