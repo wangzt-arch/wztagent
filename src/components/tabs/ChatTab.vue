@@ -93,10 +93,9 @@
           <div class="input-wrapper">
             <textarea
               v-model="inputMessage"
-              placeholder="输入你的问题..."
+              placeholder="输入你的问题,回车发送..."
               rows="3"
-              @keydown.ctrl.enter="sendMessage"
-              @keydown.meta.enter="sendMessage"
+              @keydown.enter="sendMessage"
               :disabled="store.chatLoading.value"
             ></textarea>
             <button class="clear-input" v-if="inputMessage" @click="inputMessage = ''">
@@ -106,7 +105,6 @@
             </button>
           </div>
           <div class="input-actions">
-            <span class="hint-text">Ctrl + Enter 发送</span>
             <button class="btn-primary send-btn" @click="sendMessage" :disabled="!inputMessage.trim() || store.chatLoading.value">
               <svg v-if="!store.chatLoading.value" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m22 2-7 20-4-9-9-4Z"/>
@@ -187,7 +185,7 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 180px);
+  max-height: calc(100vh - 130px);
 }
 
 .sessions-header {

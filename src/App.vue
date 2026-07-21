@@ -11,8 +11,6 @@
       </Transition>
     </main>
 
-    <AppFooter />
-
     <ErrorToast :error-msg="store.errorMsg.value" :success-msg="store.toastMsg.value" @dismiss="store.errorMsg.value = ''; store.toastMsg.value = ''" />
 
     <Lightbox
@@ -27,7 +25,6 @@
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useAppStore } from './composables/useAppStore.js'
 import AppHeader from './components/layout/AppHeader.vue'
-import AppFooter from './components/layout/AppFooter.vue'
 import CreateTab from './components/tabs/CreateTab.vue'
 import GalleryTab from './components/tabs/GalleryTab.vue'
 import ChatTab from './components/tabs/ChatTab.vue'
@@ -50,7 +47,7 @@ onBeforeUnmount(() => {
 .app-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--bg-primary);
 }
 
