@@ -314,7 +314,8 @@ async function generateImageWrapper() {
   const galleryType = imageMode.value === 'img2img' ? 'image-to-image' : 'text-to-image'
 
   // 图片同步生成，无真正的任务ID，taskId 传 null
-  const newItem = addToGallery(galleryType, null, promptText, null, 'generating')
+  addToGallery(galleryType, null, promptText, null, 'generating')
+  const newItem = userGalleryItems.value[0]  // 取响应式引用，修改能触发 Vue 更新
 
   toastMsg.value = '任务已创建，进度将在画廊中显示'
   setTimeout(() => { toastMsg.value = '' }, 3000)
