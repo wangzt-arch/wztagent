@@ -233,6 +233,14 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    autoHideMenuBar: false,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#0a0a0f',
+      symbolColor: '#ffffff',
+      height: 32
+    },
+    backgroundColor: '#0a0a0f',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -252,6 +260,23 @@ function createWindow() {
       slashes: true
     }))
   }
+
+  // Electron 专属样式：顶部留白 + 可拖拽区域 + 按钮避让
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.insertCSS(`
+      html, body {box-sizing: border-box; }
+      .app-header {
+        padding-right: 160px !important;
+        -webkit-app-region: drag;
+      }
+      .app-header .header-nav,
+      .app-header .nav-btn,
+      .app-header .logo-icon,
+      .app-header .logo-text {
+        -webkit-app-region: no-drag;
+      }
+    `)
+  })
 
   mainWindow.on('closed', function () {
     mainWindow = null
