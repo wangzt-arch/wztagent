@@ -9,7 +9,7 @@
         </div>
         <div class="logo-text">
           <h1>AI Creator</h1>
-          <span class="subtitle">AI Image & Video Studio</span>
+          <span class="subtitle">AI Creator Studio</span>
         </div>
       </div>
       <nav class="header-nav">
@@ -32,6 +32,11 @@ defineProps(['currentTab'])
 defineEmits(['switch-tab'])
 
 const tabs = [
+  {
+    key: 'chat',
+    label: '对话',
+    svg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+  },
   {
     key: 'create',
     label: '创作',

@@ -6,6 +6,7 @@
       <Transition name="tab-switch" mode="out-in">
         <CreateTab v-if="store.currentTab.value === 'create'" key="create" />
         <GalleryTab v-else-if="store.currentTab.value === 'gallery'" key="gallery" />
+        <ChatTab v-else-if="store.currentTab.value === 'chat'" key="chat" />
         <SettingsTab v-else key="settings" />
       </Transition>
     </main>
@@ -29,6 +30,7 @@ import AppHeader from './components/layout/AppHeader.vue'
 import AppFooter from './components/layout/AppFooter.vue'
 import CreateTab from './components/tabs/CreateTab.vue'
 import GalleryTab from './components/tabs/GalleryTab.vue'
+import ChatTab from './components/tabs/ChatTab.vue'
 import SettingsTab from './components/tabs/SettingsTab.vue'
 import ErrorToast from './components/common/ErrorToast.vue'
 import Lightbox from './components/common/Lightbox.vue'

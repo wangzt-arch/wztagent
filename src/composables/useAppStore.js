@@ -4,7 +4,7 @@
  * 负责管理全局状态、业务逻辑和用户交互
  */
 import { ref, computed, watch } from 'vue'
-import { setApiKey, setBaseUrl, generateImage, testConnection, createVideo, getVideoStatus, getVideoUrl } from '../api/index.js'
+import { setApiKey, setBaseUrl, generateImage, testConnection, createVideo, getVideoStatus, getVideoUrl, chat } from '../api/index.js'
 
 // ==================== 导航状态 ====================
 
@@ -98,6 +98,24 @@ const galleryItems = ref([])
 /** Lightbox 索引（-1 表示关闭）*/
 const lightboxIdx = ref(-1)
 
+// ==================== 对话状态 ====================
+
+/** 对话会话列表 */
+const chatSessions = ref([])
+/** 当前激活的会话 ID */
+const currentChatSessionId = ref(null)
+/** 是否正在发送消息 */
+const chatLoading = ref(false)
+
+/**
+ * 获取当前激活会话的消息列表
+ * @returns {Array} 消息数组
+ */
+const chatMessages = computed(() => {
+  const session = chatSessions.value.find(s => s.id === currentChatSessionId.value)
+  return session ? session.messages : []
+})
+
 // ==================== 定时器引用 ====================
 
 /** 轮询定时器 */
@@ -129,6 +147,22 @@ function loadSettings() {
   galleryItems.value = raw.map(normalizeGalleryItem)
   setApiKey(apiKey.value)
   setBaseUrl(baseUrl.value)
+
+  // 加载对话会话
+  const savedSessions = JSON.parse(localStorage.getItem('agnes_chat_sessions') || '[]')
+  chatSessions.value = savedSessions.map(session => ({
+    ...session,
+    messages: session.messages.map(msg => ({
+      ...msg,
+      displayContent: msg.displayContent || msg.content
+    }))
+  }))
+  // 如果有保存的会话，激活第一个；否则创建新会话
+  if (savedSessions.length > 0) {
+    currentChatSessionId.value = savedSessions[0].id
+  } else {
+    createChatSession()
+  }
 }
 
 /**
@@ -669,6 +703,9 @@ export function useAppStore() {
     // 画廊
     galleryItems,
     lightboxIdx,
+    // 对话
+    chatMessages,
+    chatLoading,
     // 方法
     loadSettings,
     saveSetting,
@@ -699,6 +736,160 @@ export function useAppStore() {
     getTypeLabel,
     getStatusLabel,
     formatTime,
-    openLightbox
+    openLightbox,
+    sendMessage,
+    clearChat,
+    // 会话管理
+    chatSessions,
+    currentChatSessionId,
+    createChatSession,
+    deleteChatSession,
+    switchChatSession,
+    updateChatSessionTitle
+  }
+}
+
+/**
+ * 发送对话消息
+ * @param {string} text - 用户输入的消息内容
+ */
+async function sendMessage(text) {
+  if (!apiKey.value) { errorMsg.value = '请先在设置中配置 API Key'; return }
+  if (!text.trim()) return
+
+  const session = chatSessions.value.find(s => s.id === currentChatSessionId.value)
+  if (!session) return
+
+  chatLoading.value = true
+
+  const userMsg = {
+    id: Date.now(),
+    role: 'user',
+    content: text,
+    createdAt: new Date().toISOString()
+  }
+  session.messages.push(userMsg)
+
+  const assistantMsg = {
+    id: Date.now() + 1,
+    role: 'assistant',
+    content: '',
+    createdAt: new Date().toISOString()
+  }
+  session.messages.push(assistantMsg)
+
+  // 更新会话标题（用第一条消息的前20个字符）
+  if (session.messages.length === 2) {
+    session.title = text.slice(0, 20) + (text.length > 20 ? '...' : '')
+  }
+  session.updatedAt = new Date().toISOString()
+  saveChatSessions()
+
+  try {
+    const messages = session.messages.map(m => ({
+      role: m.role,
+      content: m.content
+    }))
+
+    assistantMsg.displayContent = ''
+    assistantMsg.content = ''
+
+    await chat({ messages }, (chunk, fullContent) => {
+      assistantMsg.content = fullContent
+      assistantMsg.displayContent = fullContent
+    })
+  } catch (err) {
+    console.error(err)
+    errorMsg.value = err.message
+    assistantMsg.content = '抱歉，发生了错误：' + err.message
+    assistantMsg.displayContent = assistantMsg.content
+  } finally {
+    chatLoading.value = false
+    assistantMsg.displayContent = assistantMsg.content
+    saveChatSessions()
+  }
+}
+
+/**
+ * 清空当前对话记录
+ */
+function clearChat() {
+  const session = chatSessions.value.find(s => s.id === currentChatSessionId.value)
+  if (!session) return
+  if (confirm('确定清空当前对话？')) {
+    session.messages = []
+    session.title = '新对话'
+    session.updatedAt = new Date().toISOString()
+    saveChatSessions()
+  }
+}
+
+/**
+ * 保存对话会话到 localStorage
+ */
+function saveChatSessions() {
+  localStorage.setItem('agnes_chat_sessions', JSON.stringify(chatSessions.value))
+}
+
+/**
+ * 创建新对话会话
+ * @returns {object} 新创建的会话对象
+ */
+function createChatSession() {
+  const newSession = {
+    id: Date.now(),
+    title: '新对话',
+    messages: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+  chatSessions.value.unshift(newSession)
+  currentChatSessionId.value = newSession.id
+  saveChatSessions()
+  return newSession
+}
+
+/**
+ * 删除对话会话
+ * @param {string} sessionId - 会话 ID
+ */
+function deleteChatSession(sessionId) {
+  const idx = chatSessions.value.findIndex(s => s.id === sessionId)
+  if (idx === -1) return
+
+  if (!confirm('确定删除该对话？')) return
+
+  chatSessions.value.splice(idx, 1)
+  saveChatSessions()
+
+  // 如果删除的是当前激活的会话，切换到第一个或创建新会话
+  if (sessionId === currentChatSessionId.value) {
+    if (chatSessions.value.length > 0) {
+      currentChatSessionId.value = chatSessions.value[0].id
+    } else {
+      createChatSession()
+    }
+  }
+}
+
+/**
+ * 切换到指定会话
+ * @param {string} sessionId - 会话 ID
+ */
+function switchChatSession(sessionId) {
+  currentChatSessionId.value = sessionId
+}
+
+/**
+ * 更新会话标题
+ * @param {string} sessionId - 会话 ID
+ * @param {string} title - 新标题
+ */
+function updateChatSessionTitle(sessionId, title) {
+  const session = chatSessions.value.find(s => s.id === sessionId)
+  if (session) {
+    session.title = title
+    session.updatedAt = new Date().toISOString()
+    saveChatSessions()
   }
 }
