@@ -1,8 +1,9 @@
-const { app, BrowserWindow, protocol, ipcMain, Menu } = require('electron')
+const { app, BrowserWindow, protocol, ipcMain, Menu, dialog, Tray } = require('electron')
 const path = require('path')
 const url = require('url')
 
 let mainWindow
+let tray = null
 
 app.setName('创意工作室')
 
@@ -278,9 +279,49 @@ function createWindow() {
     `)
   })
 
+  // 关闭时询问：最小化到托盘还是直接退出
+  mainWindow.on('close', async (e) => {
+    if (app.isQuitting) return
+    e.preventDefault()
+    const result = await dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      title: '创意工作室',
+      icon: path.join(__dirname, '../images/star.ico'),
+      message: '确定要关闭创意工作室吗？',
+      buttons: ['最小化到托盘', '直接关闭', '取消'],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true
+    })
+    if (result.response === 0) {
+      // 最小化到托盘
+      mainWindow.hide()
+      if (!tray) createTray()
+    } else if (result.response === 1) {
+      // 直接关闭
+      app.isQuitting = true
+      mainWindow.destroy()
+    }
+    // 取消则什么都不做
+  })
+
   mainWindow.on('closed', function () {
     mainWindow = null
   })
+}
+
+// 创建系统托盘
+function createTray() {
+  const iconPath = path.join(__dirname, '../images/star.ico')
+  tray = new Tray(iconPath)
+  tray.setToolTip('创意工作室')
+  const contextMenu = Menu.buildFromTemplate([
+    { label: '显示主窗口', click: () => { mainWindow.show(); mainWindow.focus() } },
+    { type: 'separator' },
+    { label: '退出', click: () => { app.isQuitting = true; app.quit() } }
+  ])
+  tray.setContextMenu(contextMenu)
+  tray.on('double-click', () => { mainWindow.show(); mainWindow.focus() })
 }
 
 app.whenReady().then(() => {
