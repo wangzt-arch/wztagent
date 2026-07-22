@@ -167,7 +167,8 @@ const sizeOptions = [
   { value: '1024x768', label: '1024 × 768 (横版)' },
   { value: '768x1024', label: '768 × 1024 (竖版)' },
   { value: '1280x720', label: '1280 × 720 (宽屏)' },
-  { value: '720x1280', label: '720 × 1280 (手机)' }
+  { value: '720x1280', label: '720 × 1280 (手机)' },
+  { value: '2624x1472', label: '2624 × 1472 (电脑)' }
 ]
 </script>
 
