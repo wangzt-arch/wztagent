@@ -51,18 +51,22 @@ const videoNegPrompt = ref('')
 
 // ==================== 生成过程状态 ====================
 
-/** 是否正在生成图片 */
-const isImageGenerating = ref(false)
+/** 正在生成中的图片任务数量（支持并发） */
+const imageGeneratingCount = ref(0)
+/** 是否正在生成图片（只要有任务在跑就为 true，用于 loading 占位） */
+const isImageGenerating = computed(() => imageGeneratingCount.value > 0)
 /** 是否正在生成视频 */
 const isVideoGenerating = ref(false)
 /** 是否正在生成（兼容旧逻辑）*/
 const isGenerating = computed(() => isImageGenerating.value || isVideoGenerating.value)
-/** 进度条宽度百分比 */
+/** 进度条宽度百分比（仅展示最新一次任务的进度） */
 const progressWidth = ref(0)
-/** 进度提示文字 */
+/** 进度提示文字（仅展示最新一次任务的进度） */
 const progressText = ref('准备中...')
 /** 生成标题 */
 const generationTitle = ref('生成中...')
+/** 当前预览区追踪的最新图片任务 id（用于判断进度/结果是否应写入预览区） */
+let latestImageTaskId = null
 /** 图片是否生成完成 */
 const generatedImage = ref(false)
 /** 生成的图片 URL */
@@ -304,7 +308,10 @@ async function generateImageWrapper() {
   if (imageMode.value === 'txt2img' && !imagePrompt.value.trim()) { errorMsg.value = '请输入提示词'; return }
   if (imageMode.value === 'img2img' && !refImageUrl.value && !refImagePreview.value) { errorMsg.value = '请提供参考图片'; return }
 
-  isImageGenerating.value = true
+  // 并发支持：每次生成都独立追踪，预览区只展示最新任务
+  const taskId = Date.now()
+  latestImageTaskId = taskId
+  imageGeneratingCount.value++
   progressWidth.value = 0
   progressText.value = '正在创建任务...'
   errorMsg.value = ''
@@ -313,15 +320,14 @@ async function generateImageWrapper() {
   const promptText = imagePrompt.value || editPrompt.value
   const galleryType = imageMode.value === 'img2img' ? 'image-to-image' : 'text-to-image'
 
-  // 图片同步生成，无真正的任务ID，taskId 传 null
-  addToGallery(galleryType, null, promptText, null, 'generating')
-  const newItem = userGalleryItems.value[0]  // 取响应式引用，修改能触发 Vue 更新
+  // 图片同步生成，无真正的任务ID，taskId 传 null；用返回的引用更新，避免并发错乱
+  const newItem = addToGallery(galleryType, null, promptText, null, 'generating')
 
   toastMsg.value = '任务已创建，进度将在画廊中显示'
   setTimeout(() => { toastMsg.value = '' }, 3000)
 
-  // 启动进度模拟，让右侧预览区显示 loading 状态
-  startProgressSimulation()
+  // 启动进度模拟（仅对最新任务生效，旧任务的进度更新会被忽略）
+  startProgressSimulation(taskId)
 
   try {
     const body = {
@@ -339,26 +345,39 @@ async function generateImageWrapper() {
     }
 
     const url = await generateImage(body, (attempt, max, status) => {
-      progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
+      // 只有最新任务才更新预览区进度
+      if (latestImageTaskId === taskId) {
+        progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
+      }
     })
 
+    // 画廊项独立更新（无论是否为最新任务）
     newItem.mediaUrl = url
     newItem.status = 'completed'
     saveGallery()
 
-    // 进度走满后切换到结果
-    progressWidth.value = 100
-    progressText.value = '生成完成'
-    generatedImage.value = true
-    generatedImageUrl.value = url
+    // 只有最新任务才更新预览区
+    if (latestImageTaskId === taskId) {
+      progressWidth.value = 100
+      progressText.value = '生成完成'
+      generatedImage.value = true
+      generatedImageUrl.value = url
+    }
   } catch (err) {
     console.error(err)
-    errorMsg.value = err.message
+    // 错误信息只对最新任务展示到预览区
+    if (latestImageTaskId === taskId) {
+      errorMsg.value = err.message
+    }
     newItem.status = 'failed'
     saveGallery()
   } finally {
-    stopProgressSimulation()
-    isImageGenerating.value = false
+    stopProgressSimulation(taskId)
+    imageGeneratingCount.value = Math.max(0, imageGeneratingCount.value - 1)
+    // 最新任务结束时，若没有其他任务在跑，清理预览区的 loading 标记
+    if (latestImageTaskId === taskId && imageGeneratingCount.value === 0) {
+      latestImageTaskId = null
+    }
   }
 }
 
@@ -481,14 +500,22 @@ function startGalleryPolling() {
 /**
  * 启动进度模拟（用于图片生成的视觉反馈）
  * 8 秒内从 0% 递增到 90%
+ * @param {number} [taskId] - 关联的图片任务 id，用于并发场景下判断是否仍为最新任务
  */
-function startProgressSimulation() {
+function startProgressSimulation(taskId) {
   if (progressTimer) clearInterval(progressTimer)
+  if (latestImageTaskId !== taskId) return  // 非最新任务，不启动进度模拟
   progressWidth.value = 0
   const startTime = Date.now()
   const duration = 8000
 
   progressTimer = setInterval(() => {
+    // 若已不是最新任务，停止更新预览区进度
+    if (latestImageTaskId !== taskId) {
+      clearInterval(progressTimer)
+      progressTimer = null
+      return
+    }
     const elapsed = Date.now() - startTime
     const progress = Math.min((elapsed / duration) * 100, 90)
     progressWidth.value = Math.round(progress)
@@ -502,7 +529,9 @@ function startProgressSimulation() {
 }
 
 /** 停止进度模拟 */
-function stopProgressSimulation() {
+function stopProgressSimulation(taskId) {
+  // 并发场景：只有最新任务停止时才真正清除定时器
+  if (taskId && latestImageTaskId !== taskId) return
   if (progressTimer) {
     clearInterval(progressTimer)
     progressTimer = null

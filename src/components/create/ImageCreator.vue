@@ -88,7 +88,7 @@
           </div>
           </div>
 
-          <button class="btn-primary" @click="store.generateImage" :disabled="store.isImageGenerating.value">
+          <button class="btn-primary" @click="store.generateImage">
             <span class="btn-content">
               <svg v-if="!store.isImageGenerating.value" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
@@ -96,7 +96,7 @@
               <svg v-else class="spin-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
               </svg>
-              {{ store.isImageGenerating.value ? '生成中...' : '生成图片' }}
+              {{ store.isImageGenerating.value ? '继续生成' : '生成图片' }}
             </span>
           </button>
         </div>
