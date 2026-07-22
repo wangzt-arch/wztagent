@@ -472,12 +472,22 @@ const sizeOptions = [
 }
 
 @media (max-width: 900px) {
-  .panel-layout { grid-template-columns: 1fr; }
+  .creation-panel {
+    overflow-y: auto;
+    height: calc(100vh - 160px);
+  }
+  .panel-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
   .preview-column {
     position: static;
     order: -1;
   }
-  .preview-empty { min-height: 260px; }
-  .controls-column .card { max-height: none; }
+  .preview-empty { min-height: 200px; }
+  .controls-column .card {
+    max-height: none;
+    height: auto;
+  }
 }
 </style>
