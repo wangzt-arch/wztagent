@@ -542,8 +542,8 @@ async function playVideo(idx, item) {
   gap: 0.25rem;
 }
 
-@media (max-width: 900px) {
-  .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+@media (max-width: 1024px) {
+  .gallery-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 768px) {

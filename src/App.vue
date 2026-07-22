@@ -80,6 +80,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .app-main { padding: 1.25rem; }
+  .app-main { padding: 1.25rem; overflow-x: hidden; }
 }
 </style>

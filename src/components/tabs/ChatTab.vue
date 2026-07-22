@@ -203,6 +203,8 @@ onMounted(() => {
 .chat-tab {
   display: flex;
   gap: 1.5rem;
+  height: 100%;
+  min-height: 0;
   animation: tab-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -758,19 +760,49 @@ onMounted(() => {
 @media (max-width: 900px) {
   .chat-tab {
     flex-direction: column;
+    min-height: 0;
   }
 
   .sessions-sidebar {
     width: 100%;
-    max-height: 200px;
+    max-height: 160px;
+    flex-shrink: 0;
+  }
+
+  .chat-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .chat-container {
-    height: calc(100vh - 380px);
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .messages-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .message-content {
     max-width: 85%;
+  }
+
+  .chat-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .chat-input-area {
+    flex-shrink: 0;
   }
 }
 </style>

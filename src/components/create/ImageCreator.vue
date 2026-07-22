@@ -478,5 +478,6 @@ const sizeOptions = [
     order: -1;
   }
   .preview-empty { min-height: 260px; }
+  .controls-column .card { max-height: none; }
 }
 </style>
