@@ -57,8 +57,8 @@ const imageUrl = computed(() => {
 
 .lightbox-close {
   position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
+  top: 3rem;
+  right: 2rem;
   width: 44px;
   height: 44px;
   border-radius: 50%;
