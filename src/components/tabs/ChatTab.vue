@@ -138,9 +138,11 @@ marked.setOptions({
 
 /**
  * 渲染消息内容
- * 推送中：简单文本（换行符转 br）
- * 推送完成后：完整 Markdown 渲染
+ * 推送中：增量更新（只处理新增部分），避免重复扫描全文
+ * 推送完成后：完整 Markdown 渲染（带缓存）
  */
+const renderCache = new WeakMap()
+
 function renderMessage(msg, idx) {
   const content = msg.displayContent || msg.content
   if (!content) return ''
@@ -149,13 +151,31 @@ function renderMessage(msg, idx) {
   const isStreaming = isLastAssistant && store.chatLoading.value
 
   if (isStreaming) {
-    // 推送中：简单文本显示，避免 Markdown 不完整导致渲染闪烁
-    return content.replace(/\n/g, '<br>')
+    // 推送中：增量更新，只处理新增部分
+    const cached = renderCache.get(msg)
+    if (cached && cached.source.length <= content.length && content.startsWith(cached.source)) {
+      // 只处理新增部分
+      const newPart = content.slice(cached.source.length)
+      const newHtml = newPart.replace(/\n/g, '<br>')
+      cached.source = content
+      cached.html = cached.html + newHtml
+      return cached.html
+    }
+    // 缓存失效（内容回退或首次）：全量处理
+    const html = content.replace(/\n/g, '<br>')
+    renderCache.set(msg, { source: content, html })
+    return html
   }
 
-  // 推送完成：Markdown 渲染
+  // 推送完成：Markdown 渲染（带缓存）
   if (msg.role === 'assistant') {
-    return marked.parse(content)
+    const cached = renderCache.get(msg)
+    if (cached && cached.source === content && cached.completed) {
+      return cached.html
+    }
+    const html = marked.parse(content)
+    renderCache.set(msg, { source: content, html, completed: true })
+    return html
   }
 
   // 用户消息：简单文本

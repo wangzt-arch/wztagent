@@ -842,10 +842,15 @@ async function sendMessage(text) {
     }))
 
     await chat({ messages }, (chunk, fullContent) => {
-      // SSE 流式期间，直接显示，不做打字机效果
+      // SSE 流式期间：用 rAF 节流，避免每个 chunk 都触发响应式更新
       const reactiveMsg = session.messages[msgIndex]
       reactiveMsg.content = fullContent
-      reactiveMsg.displayContent = fullContent
+      if (!reactiveMsg._rafId) {
+        reactiveMsg._rafId = requestAnimationFrame(() => {
+          reactiveMsg.displayContent = reactiveMsg.content
+          reactiveMsg._rafId = null
+        })
+      }
     })
   } catch (err) {
     console.error(err)
@@ -856,6 +861,10 @@ async function sendMessage(text) {
   } finally {
     chatLoading.value = false
     const reactiveMsg = session.messages[msgIndex]
+    if (reactiveMsg._rafId) {
+      cancelAnimationFrame(reactiveMsg._rafId)
+      reactiveMsg._rafId = null
+    }
     reactiveMsg.displayContent = reactiveMsg.content
     saveChatSessions()
   }
