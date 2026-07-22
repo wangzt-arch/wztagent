@@ -329,7 +329,10 @@ async function generateImageWrapper() {
     }
     if (negativePrompt.value) body.negative_prompt = negativePrompt.value
     if (imageMode.value === 'img2img') {
-      body.image = refImageUrl.value || refImagePreview.value
+      body.extra_body = {
+        image: [refImageUrl.value || refImagePreview.value],
+        response_format: 'url'
+      }
       if (editPrompt.value) body.prompt = editPrompt.value
     }
 
