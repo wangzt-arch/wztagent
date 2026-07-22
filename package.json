@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
-    "electron:build": "npm run build && node -e \"const fs=require('fs');['dist','release','build-output','CreativeStudio-win32-x64'].forEach(d=>{if(fs.existsSync(d))fs.rmSync(d,{recursive:true,force:true,maxRetries:5,retryDelay:100});})\" && npx electron-packager . CreativeStudio --platform=win32 --arch=x64 --out=dist --icon=src/images/cat.png --overwrite --asar"
+    "electron:build": "npm run build && node -e \"const fs=require('fs');['dist','release','build-output','CreativeStudio-win32-x64'].forEach(d=>{if(fs.existsSync(d))fs.rmSync(d,{recursive:true,force:true,maxRetries:5,retryDelay:100});})\" && npx electron-packager . CreativeStudio --platform=win32 --arch=x64 --out=dist --icon=src/images/star.ico --overwrite --asar"
   },
   "dependencies": {
     "marked": "^18.0.7",
@@ -40,7 +40,7 @@
     "asar": true,
     "win": {
       "target": "portable",
-      "icon": "src/images/cat.png",
+      "icon": "src/images/star.png",
       "artifactName": "${productName}-${version}-${arch}.exe"
     },
     "optionalDependencies": {

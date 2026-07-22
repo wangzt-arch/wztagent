@@ -204,7 +204,7 @@ const template = [
             title: '关于创意工作室',
             message: '创意工作室 v1.0.0',
             detail: '一款强大的AI图像和视频生成工具',
-            icon: path.join(__dirname, '../../images/star.png')
+            icon: path.join(__dirname, '../images/star.ico')
           })
         }
       },
@@ -216,7 +216,7 @@ const template = [
             title: '检查更新',
             message: '创意工作室',
             detail: '当前版本: 1.0.0\n已是最新版本',
-            icon: path.join(__dirname, '../../images/cat.png')
+            icon: path.join(__dirname, '../images/star.ico')
           })
         }
       }
@@ -247,7 +247,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs')
     },
     title: '创意工作室',
-    icon: path.join(__dirname, '../../images/cat.png')
+    icon: path.join(__dirname, '../images/star.ico')
   })
 
   if (process.env.NODE_ENV === 'development') {
