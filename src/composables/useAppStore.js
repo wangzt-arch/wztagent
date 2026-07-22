@@ -319,7 +319,9 @@ async function generateImageWrapper() {
 
   toastMsg.value = '任务已创建，进度将在画廊中显示'
   setTimeout(() => { toastMsg.value = '' }, 3000)
-  isImageGenerating.value = false
+
+  // 启动进度模拟，让右侧预览区显示 loading 状态
+  startProgressSimulation()
 
   try {
     const body = {
@@ -344,6 +346,9 @@ async function generateImageWrapper() {
     newItem.status = 'completed'
     saveGallery()
 
+    // 进度走满后切换到结果
+    progressWidth.value = 100
+    progressText.value = '生成完成'
     generatedImage.value = true
     generatedImageUrl.value = url
   } catch (err) {
@@ -351,6 +356,9 @@ async function generateImageWrapper() {
     errorMsg.value = err.message
     newItem.status = 'failed'
     saveGallery()
+  } finally {
+    stopProgressSimulation()
+    isImageGenerating.value = false
   }
 }
 
