@@ -1,5 +1,10 @@
 <template>
   <div class="creation-panel">
+    <div class="project-context">
+      <span>当前项目</span>
+      <strong>{{ store.currentProject.value?.name || '未命名项目' }}</strong>
+      <button @click="store.currentTab.value = 'projects'">管理项目</button>
+    </div>
     <div class="panel-layout">
       <!-- Left: Controls -->
       <div class="controls-column">
@@ -177,12 +182,17 @@ const sizeOptions = [
   height: 100%;
 }
 
+.project-context { display: flex; align-items: center; gap: .55rem; margin-bottom: 1rem; color: var(--text-muted); font-size: .78rem; }
+.project-context strong { color: var(--text-secondary); font-weight: 600; }
+.project-context button { padding: 0; border: 0; background: transparent; color: #bdaaff; cursor: pointer; font: inherit; }
+.project-context button:hover { color: #fff; }
+
 .panel-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   align-items: stretch;
-  height: 100%;
+  height: 97%;
 }
 
 .controls-column {
@@ -204,23 +214,6 @@ const sizeOptions = [
   overflow-y: auto;
   min-height: 0;
   padding-right: 0.5rem;
-}
-
-.card-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.card-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.card-scroll::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
-
-.card-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
 }
 
 .controls-column .btn-primary {

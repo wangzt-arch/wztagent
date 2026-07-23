@@ -123,6 +123,9 @@
                   <span v-if="item.status === 'generating'" class="status-spinner"></span>
                   {{ store.getStatusLabel(item.status) }}
                 </span>
+                <button v-if="item.projectId" class="project-badge" @click.stop="store.openProject(item.projectId)">
+                  {{ store.getProjectName(item.projectId) }} · V{{ item.version || 1 }}
+                </button>
               </div>
               <p class="meta-prompt">{{ item.prompt || '无描述' }}</p>
               <span class="meta-time">{{ store.formatTime(item.createdAt) }}</span>
@@ -175,6 +178,12 @@
           <div class="detail-row">
             <span class="detail-label">提示词</span>
             <span class="detail-value">{{ statusDetail.prompt || '无' }}</span>
+          </div>
+          <div v-if="statusDetail.projectId" class="detail-row">
+            <span class="detail-label">项目版本</span>
+            <button class="detail-project-link" @click="store.openProject(statusDetail.projectId); statusDetail = null">
+              {{ store.getProjectName(statusDetail.projectId) }} · V{{ statusDetail.version || 1 }}
+            </button>
           </div>
           <div class="detail-row">
             <span class="detail-label">创建时间</span>
@@ -307,23 +316,6 @@ async function playVideo(idx, item) {
   overflow-x: hidden;
   padding-right: 0.5rem;
   min-height: 0;
-}
-
-.gallery-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.gallery-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.gallery-content::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
-
-.gallery-content::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
 }
 
 .gallery-header {
@@ -500,6 +492,19 @@ async function playVideo(idx, item) {
   margin-bottom: 0.4rem;
   flex-wrap: wrap;
 }
+
+.project-badge, .detail-project-link {
+  border: 0;
+  color: #c4b5fd;
+  background: rgba(124, 58, 237, 0.13);
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font: inherit;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+
+.project-badge:hover, .detail-project-link:hover { color: #fff; background: rgba(124, 58, 237, 0.3); }
 
 .meta-prompt {
   color: var(--text-secondary);

@@ -4,7 +4,7 @@
     <div class="sessions-sidebar">
       <div class="sessions-header">
         <h3>对话列表</h3>
-        <button class="btn-icon" @click="store.createChatSession" title="新建对话">
+        <button class="btn-icon" @click="rolePickerOpen = true" title="新建对话">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 5v14M5 12h14"/>
           </svg>
@@ -20,6 +20,7 @@
           <div class="session-info">
             <div class="session-title">{{ session.title }}</div>
             <div class="session-meta">
+              <span class="session-role">{{ store.getChatRole(session.roleId).name }}</span>
               {{ session.messages.length }} 条消息
             </div>
           </div>
@@ -37,7 +38,7 @@
       <div class="chat-header">
         <div class="header-title">
           <h2>AI 对话</h2>
-          <p class="page-desc">与 Agnes-2.0-Flash 进行实时对话</p>
+          <p class="page-desc">{{ store.currentChatRole.value.name }} · {{ store.currentChatRole.value.description }}</p>
         </div>
         <div class="header-actions">
           <button v-if="store.chatMessages.value.length > 0" class="btn-secondary" @click="store.clearChat">
@@ -80,6 +81,16 @@
                 <span v-if="msg.role === 'assistant'" class="model-label">agnes-2.0-flash</span>
               </div>
               <div class="message-body" v-html="renderMessage(msg, idx)"></div>
+              <div v-if="msg.role === 'assistant' && (msg.displayContent || msg.content)" class="message-actions">
+                <button v-if="store.hasChatPrompt(msg.content, 'image')" title="提取生图提示词区块" @click="store.useChatPrompt(msg.content, 'image')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L6 21"/></svg>
+                  提取生图提示词
+                </button>
+                <button v-if="store.hasChatPrompt(msg.content, 'video')" title="提取生视频提示词区块" @click="store.useChatPrompt(msg.content, 'video')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+                  提取生视频提示词
+                </button>
+              </div>
               <div v-if="msg.role === 'assistant' && store.chatLoading.value && idx === store.chatMessages.value.length - 1 && !(msg.displayContent || msg.content)" class="typing-indicator">
                 <span class="typing-dot"></span>
                 <span class="typing-dot"></span>
@@ -118,6 +129,26 @@
         </div>
       </div>
     </div>
+
+    <div v-if="rolePickerOpen" class="role-picker-mask" @click.self="rolePickerOpen = false">
+      <section class="role-picker" role="dialog" aria-modal="true" aria-labelledby="role-picker-title">
+        <div class="role-picker-header">
+          <div>
+            <span class="role-picker-eyebrow">NEW CONVERSATION</span>
+            <h3 id="role-picker-title">选择对话角色</h3>
+          </div>
+          <button class="btn-icon" title="关闭" @click="rolePickerOpen = false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 6-12 12M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="role-grid">
+          <button v-for="role in store.chatRoles" :key="role.id" class="role-card" @click="createRoleSession(role.id)">
+            <strong>{{ role.name }}</strong>
+            <span>{{ role.description }}</span>
+          </button>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -129,6 +160,12 @@ import { useAppStore } from '../../composables/useAppStore.js'
 const store = useAppStore()
 const inputMessage = ref('')
 const messagesContainer = ref(null)
+const rolePickerOpen = ref(false)
+
+function createRoleSession(roleId) {
+  store.createChatSession(roleId)
+  rolePickerOpen.value = false
+}
 
 // 配置 marked
 marked.setOptions({
@@ -283,15 +320,6 @@ onMounted(() => {
   padding: 0.5rem;
 }
 
-.sessions-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sessions-list::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 2px;
-}
-
 .session-item {
   padding: 0.75rem;
   border-radius: var(--radius-md);
@@ -337,6 +365,11 @@ onMounted(() => {
   margin-top: 0.25rem;
 }
 
+.session-role {
+  color: var(--accent-cyan);
+  margin-right: 0.35rem;
+}
+
 .delete-btn {
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -364,6 +397,66 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 1rem;
 }
+
+.role-picker-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(8px);
+}
+
+.role-picker {
+  width: min(620px, 100%);
+  padding: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.role-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.role-picker-eyebrow {
+  display: block;
+  color: var(--accent-cyan);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.role-picker h3 { margin-top: 0.25rem; font-size: 1.15rem; }
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.role-card {
+  min-height: 92px;
+  padding: 0.9rem;
+  color: var(--text-primary);
+  text-align: left;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.role-card:hover { border-color: var(--accent-purple); background: rgba(124, 58, 237, 0.15); }
+.role-card strong, .role-card span { display: block; }
+.role-card strong { font-size: 0.88rem; }
+.role-card span { margin-top: 0.3rem; color: var(--text-muted); font-size: 0.75rem; line-height: 1.45; }
 
 .header-title h2 {
   font-size: 1.75rem;
@@ -400,23 +493,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.messages-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.messages-list::-webkit-scrollbar-track {
-  background: var(--bg-input);
-}
-
-.messages-list::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
-
-.messages-list::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
 }
 
 .empty-chat {
@@ -546,6 +622,32 @@ onMounted(() => {
 
 .message-body :deep(p:last-child) {
   margin-bottom: 0;
+}
+
+.message-actions {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+
+.message-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.32rem 0.55rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.message-actions button:hover {
+  color: #d8ccff;
+  border-color: var(--accent-purple);
+  background: rgba(124, 58, 237, 0.1);
 }
 
 .message-body :deep(h1),
@@ -824,5 +926,7 @@ onMounted(() => {
   .chat-input-area {
     flex-shrink: 0;
   }
+
+  .role-grid { grid-template-columns: 1fr; }
 }
 </style>

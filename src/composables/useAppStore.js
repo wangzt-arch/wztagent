@@ -143,7 +143,119 @@ const galleryItems = computed(() => [...demoItems.value, ...userGalleryItems.val
 /** Lightbox 索引（-1 表示关闭）*/
 const lightboxIdx = ref(-1)
 
+// ==================== 项目与模板状态 ====================
+
+/** 创作项目，承载简报、模板和作品版本 */
+const projects = ref([])
+/** 当前项目 ID */
+const currentProjectId = ref(null)
+/** 当前项目 */
+const currentProject = computed(() => projects.value.find(project => project.id === currentProjectId.value) || null)
+/** 当前项目中的生成版本，最新版本排在前面 */
+const currentProjectVersions = computed(() => {
+  if (!currentProjectId.value) return []
+  return userGalleryItems.value
+    .filter(item => item.projectId === currentProjectId.value)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+})
+
+/** 可直接带入创作表单的内容模板 */
+const contentTemplates = [
+  {
+    id: 'product-launch',
+    title: '新品发布',
+    description: '产品主视觉与卖点短片',
+    imagePrompt: '为一款新品制作高级商业广告主视觉，突出产品材质、核心卖点和干净的留白构图，专业棚拍光线，品牌感强',
+    videoPrompt: '新品悬浮在简洁的品牌空间中，镜头缓慢推进，光线扫过产品细节，最后定格在清晰的产品主视觉上',
+    imageSize: '1024x1024',
+    videoDuration: '121'
+  },
+  {
+    id: 'social-cover',
+    title: '社媒封面',
+    description: '抓住注意力的竖版视觉',
+    imagePrompt: '为社交媒体制作醒目的竖版封面，主体明确，色彩有冲击力，留出标题文字空间，现代编辑设计风格',
+    videoPrompt: '竖版社交媒体短片开场，主体快速进入画面，镜头有节奏地推进，形成强烈的第一秒视觉吸引力',
+    imageSize: '720x1280',
+    videoDuration: '81'
+  },
+  {
+    id: 'brand-story',
+    title: '品牌故事',
+    description: '具备统一情绪的品牌叙事',
+    imagePrompt: '以电影感画面讲述一个温暖而真实的品牌故事，人物与产品自然互动，统一色彩语言，富有情绪和细节',
+    videoPrompt: '电影感品牌故事短片，人物与产品在自然光中互动，镜头缓慢移动，氛围温暖克制，结尾留出品牌表达空间',
+    imageSize: '1024x768',
+    videoDuration: '209'
+  },
+  {
+    id: 'character-concept',
+    title: '角色设定',
+    description: '角色视觉与动态概念',
+    imagePrompt: '原创角色概念设计，全身视角，清晰的服装、材质和道具细节，统一世界观，角色设定稿风格，高细节',
+    videoPrompt: '原创角色站在其所属世界中，镜头缓慢环绕，衣物和环境有细微动态，呈现角色的气质和故事感',
+    imageSize: '768x1024',
+    videoDuration: '121'
+  }
+]
+
 // ==================== 对话状态 ====================
+
+const CHAT_RESPONSE_PROTOCOL = `当用户需要图像或视频生成提示词时，必须使用以下 Markdown 结构：
+
+## 生图提示词
+\`\`\`prompt
+只放可直接发送给图像模型的完整正向提示词。
+\`\`\`
+## 生图反向提示词
+\`\`\`negative-prompt
+只放需要排除的内容；没有时保持空代码块。
+\`\`\`
+
+## 生视频提示词
+\`\`\`prompt
+只放可直接发送给视频模型的完整正向提示词。
+\`\`\`
+## 生视频反向提示词
+\`\`\`negative-prompt
+只放需要排除的内容；没有时保持空代码块。
+\`\`\`
+
+普通回答无需使用提示词区块。严禁在其他位置输出可提取提示词，也不要省略标题或代码块。`
+
+/** 新建对话时可选择的固定角色 */
+const chatRoles = [
+  {
+    id: 'default',
+    name: '普通对话',
+    description: '自然问答与通用协作',
+    systemPrompt: '你是一个可靠、自然的通用 AI 助手。直接回答用户问题；只有用户明确需要创作提示词时才提供提示词区块。'
+  },
+  {
+    id: 'prompt-assistant',
+    name: '提示词助手',
+    description: '将想法转成可生成提示词',
+    systemPrompt: '你是专业提示词助手。先澄清创作目标，再给出适合目标媒介的高质量正向与反向提示词，覆盖主体、风格、构图、光线和质感。'
+  },
+  {
+    id: 'visual-director',
+    name: '视觉导演',
+    description: '定义构图、风格与镜头语言',
+    systemPrompt: '你是视觉导演。围绕品牌、受众和情绪提出构图、色彩、光线、镜头和参考方向，并在结尾给出可直接生成的提示词。'
+  },
+  {
+    id: 'storyboard',
+    name: '视频分镜师',
+    description: '拆解镜头、动作与节奏',
+    systemPrompt: '你是视频分镜师。把创意拆成清晰的镜头运动、主体动作、节奏和时长建议，并优先给出可直接用于视频生成的提示词。'
+  },
+  {
+    id: 'brand-copywriter',
+    name: '品牌文案师',
+    description: '提炼品牌表达与内容方向',
+    systemPrompt: '你是品牌文案师。根据品牌、受众和渠道提炼简报、传播主张和文案方向；需要视觉素材时，再给出匹配的生成提示词。'
+  }
+]
 
 /** 对话会话列表 */
 const chatSessions = ref([])
@@ -159,6 +271,11 @@ const chatLoading = ref(false)
 const chatMessages = computed(() => {
   const session = chatSessions.value.find(s => s.id === currentChatSessionId.value)
   return session ? session.messages : []
+})
+
+const currentChatRole = computed(() => {
+  const session = chatSessions.value.find(s => s.id === currentChatSessionId.value)
+  return getChatRole(session?.roleId)
 })
 
 // ==================== 定时器引用 ====================
@@ -190,6 +307,30 @@ function loadSettings() {
   baseUrl.value = localStorage.getItem('agnes_base_url') || 'https://apihub.agnes-ai.com/v1'
   const raw = JSON.parse(localStorage.getItem('agnes_gallery') || '[]')
   userGalleryItems.value = raw.map(normalizeGalleryItem)
+
+  const savedProjects = JSON.parse(localStorage.getItem('agnes_projects') || '[]')
+  projects.value = savedProjects
+  if (projects.value.length === 0 && userGalleryItems.value.length > 0) {
+    const legacyProject = {
+      id: 'legacy-project',
+      name: '历史创作',
+      brief: '自动归档的历史作品',
+      templateId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    projects.value = [legacyProject]
+    userGalleryItems.value.forEach((item, index) => {
+      item.projectId = legacyProject.id
+      item.version = item.version || index + 1
+    })
+    saveProjects()
+    saveGallery()
+  }
+  const savedProjectId = localStorage.getItem('agnes_current_project_id')
+  currentProjectId.value = projects.value.some(project => project.id === savedProjectId)
+    ? savedProjectId
+    : projects.value[0]?.id || null
   setApiKey(apiKey.value)
   setBaseUrl(baseUrl.value)
 
@@ -197,6 +338,7 @@ function loadSettings() {
   const savedSessions = JSON.parse(localStorage.getItem('agnes_chat_sessions') || '[]')
   chatSessions.value = savedSessions.map(session => ({
     ...session,
+    roleId: chatRoles.some(role => role.id === session.roleId) ? session.roleId : 'default',
     messages: session.messages.map(msg => ({
       ...msg,
       displayContent: msg.displayContent || msg.content
@@ -550,6 +692,10 @@ function stopProgressSimulation(taskId) {
  * @returns {object} 新创建的作品对象引用
  */
 function addToGallery(type, mediaUrl, prompt, taskId, status) {
+  const project = ensureCurrentProject()
+  const latestVersion = userGalleryItems.value
+    .filter(item => item.projectId === project.id)
+    .reduce((max, item) => Math.max(max, item.version || 0), 0)
   const item = {
     id: Date.now() + Math.random().toString(36).slice(2, 6),
     type,
@@ -557,6 +703,8 @@ function addToGallery(type, mediaUrl, prompt, taskId, status) {
     prompt,
     taskId,
     status: status || 'generating',
+    projectId: project.id,
+    version: latestVersion + 1,
     createdAt: new Date().toISOString()
   }
   userGalleryItems.value.unshift(item)
@@ -790,9 +938,17 @@ export function useAppStore() {
     // 画廊
     galleryItems,
     lightboxIdx,
+    // 项目与模板
+    projects,
+    currentProjectId,
+    currentProject,
+    currentProjectVersions,
+    contentTemplates,
     // 对话
     chatMessages,
     chatLoading,
+    chatRoles,
+    currentChatRole,
     // 方法
     loadSettings,
     saveSetting,
@@ -817,6 +973,16 @@ export function useAppStore() {
     fetchVideoUrl,
     refreshGalleryStatuses,
     resumeGalleryItem,
+    // 项目与模板方法
+    createProject,
+    selectProject,
+    updateCurrentProject,
+    deleteProject,
+    applyTemplate,
+    useChatPrompt,
+    hasChatPrompt,
+    getProjectName,
+    openProject,
     downloadImage,
     downloadVideo,
     useAsReference,
@@ -832,7 +998,8 @@ export function useAppStore() {
     createChatSession,
     deleteChatSession,
     switchChatSession,
-    updateChatSessionTitle
+    updateChatSessionTitle,
+    getChatRole
   }
 }
 
@@ -877,10 +1044,17 @@ async function sendMessage(text) {
   saveChatSessions()
 
   try {
-    const messages = session.messages.map(m => ({
-      role: m.role,
-      content: m.content
-    }))
+    const role = getChatRole(session.roleId)
+    const messages = [
+      {
+        role: 'system',
+        content: `${role.systemPrompt}\n\n${CHAT_RESPONSE_PROTOCOL}`
+      },
+      ...session.messages.map(m => ({
+        role: m.role,
+        content: m.content
+      }))
+    ]
 
     await chat({ messages }, (chunk, fullContent) => {
       // SSE 流式期间：用 rAF 节流，避免每个 chunk 都触发响应式更新
@@ -936,10 +1110,12 @@ function saveChatSessions() {
  * 创建新对话会话
  * @returns {object} 新创建的会话对象
  */
-function createChatSession() {
+function createChatSession(roleId = 'default') {
+  const role = getChatRole(roleId)
   const newSession = {
     id: Date.now(),
-    title: '新对话',
+    title: role.id === 'default' ? '新对话' : `${role.name}对话`,
+    roleId: role.id,
     messages: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -993,4 +1169,158 @@ function updateChatSessionTitle(sessionId, title) {
     session.updatedAt = new Date().toISOString()
     saveChatSessions()
   }
+}
+
+function getChatRole(roleId = 'default') {
+  return chatRoles.find(role => role.id === roleId) || chatRoles[0]
+}
+
+// ==================== 项目与模板管理 ====================
+
+function saveProjects() {
+  localStorage.setItem('agnes_projects', JSON.stringify(projects.value))
+  if (currentProjectId.value) localStorage.setItem('agnes_current_project_id', currentProjectId.value)
+  else localStorage.removeItem('agnes_current_project_id')
+}
+
+function createProject(name = '未命名项目', options = {}) {
+  const now = new Date().toISOString()
+  const project = {
+    id: `project_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name: name.trim() || '未命名项目',
+    brief: options.brief || '',
+    templateId: options.templateId || null,
+    createdAt: now,
+    updatedAt: now
+  }
+  projects.value.unshift(project)
+  currentProjectId.value = project.id
+  saveProjects()
+  return project
+}
+
+function ensureCurrentProject() {
+  return currentProject.value || createProject()
+}
+
+function selectProject(projectId) {
+  if (!projects.value.some(project => project.id === projectId)) return
+  currentProjectId.value = projectId
+  saveProjects()
+}
+
+function updateCurrentProject(patch) {
+  const project = currentProject.value
+  if (!project) return
+  Object.assign(project, patch, { updatedAt: new Date().toISOString() })
+  saveProjects()
+}
+
+function deleteProject(projectId) {
+  const index = projects.value.findIndex(project => project.id === projectId)
+  if (index === -1) return
+  projects.value.splice(index, 1)
+  userGalleryItems.value.forEach(item => {
+    if (item.projectId === projectId) item.projectId = null
+  })
+  if (currentProjectId.value === projectId) currentProjectId.value = projects.value[0]?.id || null
+  saveProjects()
+  saveGallery()
+}
+
+function applyTemplate(template) {
+  const project = currentProject.value || createProject(template.title, {
+    brief: template.description,
+    templateId: template.id
+  })
+  updateCurrentProject({
+    name: project.name === '未命名项目' ? template.title : project.name,
+    brief: project.brief || template.description,
+    templateId: template.id
+  })
+  imagePrompt.value = template.imagePrompt
+  imageSize.value = template.imageSize
+  videoPrompt.value = template.videoPrompt
+  videoDuration.value = template.videoDuration
+  mediaType.value = 'image'
+  imageMode.value = 'txt2img'
+  currentTab.value = 'create'
+  toastMsg.value = `已应用“${template.title}”模板`
+  setTimeout(() => { toastMsg.value = '' }, 3000)
+}
+
+function useChatPrompt(content, target = 'image') {
+  const prompt = extractChatPrompt(content, target)
+  if (!prompt) {
+    errorMsg.value = target === 'video'
+      ? '未找到“生视频提示词”区块，请让 AI 按提示词格式重新输出。'
+      : '未找到“生图提示词”区块，请让 AI 按提示词格式重新输出。'
+    return
+  }
+  const extractedNegativePrompt = extractChatNegativePrompt(content, target)
+  ensureCurrentProject()
+  if (target === 'video') {
+    mediaType.value = 'video'
+    videoMode.value = 'txt2vid'
+    videoPrompt.value = prompt
+    videoNegPrompt.value = extractedNegativePrompt
+  } else {
+    mediaType.value = 'image'
+    imageMode.value = 'txt2img'
+    imagePrompt.value = prompt
+    negativePrompt.value = extractedNegativePrompt
+  }
+  currentTab.value = 'create'
+  toastMsg.value = extractedNegativePrompt ? '已提取正向与反向提示词' : '已提取提示词并清空反向提示词'
+  setTimeout(() => { toastMsg.value = '' }, 3000)
+}
+
+/**
+ * 从 AI 回复中提取明确标注的生成提示词，不允许将整段对话带入创作。
+ * 仅接受“生图提示词 / 生视频提示词”标题后紧接的 prompt 代码块。
+ */
+function extractChatPrompt(content, target) {
+  const text = content?.replace(/\r/g, '').trim()
+  if (!text) return ''
+
+  const labels = target === 'video'
+    ? '(?:生视频|视频|video)\\s*(?:提示词|prompt)'
+    : '(?:生图|图片|图像|image)\\s*(?:提示词|prompt)'
+  const labeledBlock = new RegExp(`(?:^|\\n)\\s*(?:#{1,6}\\s*)?(?:\\*{1,2})?${labels}(?:\\*{1,2})?\\s*[:：]?\\s*`, 'i')
+  const match = labeledBlock.exec(text)
+  if (!match) return ''
+
+  const afterLabel = text.slice(match.index + match[0].length)
+  const fenced = afterLabel.match(/^\s*```prompt\s*\n([\s\S]*?)\n?```/i)
+  return fenced?.[1]?.trim() || ''
+}
+
+function hasChatPrompt(content, target) {
+  return Boolean(extractChatPrompt(content, target))
+}
+
+/** 从固定的反向提示词区块提取排除内容；未提供时返回空字符串。 */
+function extractChatNegativePrompt(content, target) {
+  const text = content?.replace(/\r/g, '').trim()
+  if (!text) return ''
+
+  const labels = target === 'video'
+    ? '(?:生视频|视频|video)\\s*(?:反向提示词|negative\\s*prompt)'
+    : '(?:生图|图片|图像|image)\\s*(?:反向提示词|negative\\s*prompt)'
+  const labeledBlock = new RegExp(`(?:^|\\n)\\s*(?:#{1,6}\\s*)?(?:\\*{1,2})?${labels}(?:\\*{1,2})?\\s*[:：]?\\s*`, 'i')
+  const match = labeledBlock.exec(text)
+  if (!match) return ''
+
+  const afterLabel = text.slice(match.index + match[0].length)
+  const fenced = afterLabel.match(/^\s*```negative-prompt\s*\n([\s\S]*?)\n?```/i)
+  return fenced?.[1]?.trim() || ''
+}
+
+function getProjectName(projectId) {
+  return projects.value.find(project => project.id === projectId)?.name || '未归档'
+}
+
+function openProject(projectId) {
+  selectProject(projectId)
+  currentTab.value = 'projects'
 }

@@ -63,6 +63,31 @@ body {
   overflow-x: hidden;
 }
 
+/* ===== Unified Scrollbars ===== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167, 139, 250, 0.5) var(--bg-secondary);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.5);
+  border: 2px solid var(--bg-secondary);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(192, 132, 252, 0.82);
+}
+
 /* ===== App Layout ===== */
 .app-container {
   display: flex;
@@ -825,11 +850,6 @@ body {
   max-height: 600px;
   overflow-y: auto;
 }
-
-.history-list::-webkit-scrollbar { width: 6px; }
-.history-list::-webkit-scrollbar-track { background: transparent; }
-.history-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
-.history-list::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 .history-item {
   padding: 1.25rem;
