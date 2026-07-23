@@ -551,7 +551,7 @@ function stopProgressSimulation(taskId) {
  */
 function addToGallery(type, mediaUrl, prompt, taskId, status) {
   const item = {
-    id: Date.now(),
+    id: Date.now() + Math.random().toString(36).slice(2, 6),
     type,
     mediaUrl,
     prompt,
@@ -561,7 +561,8 @@ function addToGallery(type, mediaUrl, prompt, taskId, status) {
   }
   userGalleryItems.value.unshift(item)
   saveGallery()
-  return item
+  // 返回数组中的响应式代理对象（而非原始普通对象），确保后续属性修改能触发视图更新
+  return userGalleryItems.value[0]
 }
 
 /** 保存用户作品到 localStorage（demo 不保存） */
