@@ -9,7 +9,7 @@ const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV
 
 // API 配置状态（响应式）
 const apiKey = ref('')
-const baseUrl = ref('https://apihub.agnes-ai.com/v1')
+const baseUrl = ref('https://api.agnes-ai.cn/v1')
 
 /**
  * 设置 API Key（用于鉴权）

@@ -33,7 +33,7 @@
           <input
             v-model="store.baseUrl.value"
             type="text"
-            placeholder="https://apihub.agnes-ai.com/v1"
+            placeholder="https://api.agnes-ai.cn/v1"
             @input="store.saveSetting('base_url')"
           >
           <div class="input-icon">

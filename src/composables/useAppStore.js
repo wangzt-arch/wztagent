@@ -87,7 +87,7 @@ const toastMsg = ref('')
 /** API Key */
 const apiKey = ref('')
 /** API 基础地址 */
-const baseUrl = ref('https://apihub.agnes-ai.com/v1')
+const baseUrl = ref('https://api.agnes-ai.cn/v1')
 /** 当前模型名称 */
 const modelName = ref('agnes-image-2.1-flash')
 /** 当前模型类型 */
@@ -303,8 +303,8 @@ watch(mediaType, (newVal) => {
  * 同时初始化 API 客户端配置，并对画廊数据做状态迁移
  */
 function loadSettings() {
-  apiKey.value = localStorage.getItem('agnes_api_key') || 'sk-Sf7UT27WPfgTY0n3lE3mpN1prY0XX2sbn8Zt0tMkXsC6Eu8H'
-  baseUrl.value = localStorage.getItem('agnes_base_url') || 'https://apihub.agnes-ai.com/v1'
+  apiKey.value = localStorage.getItem('agnes_api_key') || 'sk-KFwe3zkKdAkSFvFvnUs1uWlH4pWkFAzBHjqfSKNKsfTJAInc'
+  baseUrl.value = localStorage.getItem('agnes_base_url') || 'https://api.agnes-ai.cn/v1'
   const raw = JSON.parse(localStorage.getItem('agnes_gallery') || '[]')
   userGalleryItems.value = raw.map(normalizeGalleryItem)
 

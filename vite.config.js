@@ -9,7 +9,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'https://apihub.agnes-ai.com',
+        target: 'https://api.agnes-ai.cn',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/v1'),
         secure: true
