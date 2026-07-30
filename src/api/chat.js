@@ -5,7 +5,7 @@ export async function chat(body, onChunk, onRetry) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: body.model || 'agnes-2.0-flash',
+      model: body.model || 'agnes-2.5-flash',
       messages: body.messages,
       stream: body.stream !== false,
       temperature: body.temperature,

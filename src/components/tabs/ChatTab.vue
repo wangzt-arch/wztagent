@@ -59,7 +59,7 @@
               </svg>
             </div>
             <p>开始与 AI 对话</p>
-            <p class="empty-hint">输入你的问题，Agnes-2.0-Flash 将为你提供帮助</p>
+            <p class="empty-hint">输入你的问题，Agnes-2.5-Flash 将为你提供帮助</p>
           </div>
 
           <div
@@ -78,7 +78,7 @@
             <div class="message-content">
               <div class="message-header">
                 <span class="role-label">{{ msg.role === 'user' ? '你' : 'Agnes' }}</span>
-                <span v-if="msg.role === 'assistant'" class="model-label">agnes-2.0-flash</span>
+                <span v-if="msg.role === 'assistant'" class="model-label">agnes-2.5-flash</span>
               </div>
               <div class="message-body" v-html="renderMessage(msg, idx)"></div>
               <div v-if="msg.role === 'assistant' && (msg.displayContent || msg.content)" class="message-actions">

@@ -76,7 +76,7 @@ Content-Type: application/json
 | `GET /videos/:taskId` | 查询视频任务及视频地址。生成中的任务每 5 秒轮询一次。 |
 | `POST /chat/completions` | 使用 SSE 获取流式对话结果。 |
 
-当前客户端会根据创作类型自动选择模型：图片为 `agnes-image-2.1-flash`，视频为 `agnes-video-v2.0`；对话默认使用 `agnes-2.0-flash`。所用服务需支持这些模型名，或需要相应调整源码。
+当前客户端会根据创作类型自动选择模型：图片为 `agnes-image-2.1-flash`，视频为 `agnes-video-v2.0`；对话默认使用 `agnes-2.5-flash`。所用服务需支持这些模型名，或需要相应调整源码。
 
 ## 数据与安全
 
