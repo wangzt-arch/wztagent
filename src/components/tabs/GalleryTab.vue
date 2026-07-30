@@ -193,15 +193,19 @@
             <span class="detail-label">任务ID</span>
             <span class="detail-value">{{ statusDetail.taskId }}</span>
           </div>
+          <div v-if="statusDetail.videoId" class="detail-row">
+            <span class="detail-label">视频ID</span>
+            <span class="detail-value">{{ statusDetail.videoId }}</span>
+          </div>
         </div>
         <div class="modal-footer">
-          <button v-if="statusDetail.status === 'generating' && statusDetail.taskId" class="btn-secondary" @click="store.checkGalleryItem(statusDetail); statusDetail = null">
+          <button v-if="statusDetail.status === 'generating' && (statusDetail.taskId || statusDetail.videoId)" class="btn-secondary" @click="store.checkGalleryItem(statusDetail); statusDetail = null">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
             </svg>
             刷新状态
           </button>
-          <button v-if="statusDetail.status === 'failed' && statusDetail.taskId" class="btn-primary" @click="store.resumeGalleryItem(statusDetail); statusDetail = null">
+          <button v-if="statusDetail.status === 'failed' && (statusDetail.taskId || statusDetail.videoId)" class="btn-primary" @click="store.resumeGalleryItem(statusDetail); statusDetail = null">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
             </svg>

@@ -4,7 +4,7 @@
  * 负责管理全局状态、业务逻辑和用户交互
  */
 import { ref, computed, watch } from 'vue'
-import { setApiKey, setBaseUrl, generateImage, testConnection, createVideo, getVideoStatus, getVideoUrl, chat } from '../api/index.js'
+import { setApiKey, setBaseUrl, generateImage, testConnection, createVideo, getVideoStatus, getVideoResult, getVideoUrl, extractVideoUrl, chat } from '../api/index.js'
 
 // ==================== 导航状态 ====================
 
@@ -551,14 +551,17 @@ async function generateVideoWrapper() {
       body.image = videoRefUrl.value || vidImagePreview.value
     }
 
-    const taskId = await createVideo(body, (attempt, max, status) => {
+    const { taskId, videoId } = await createVideo(body, (attempt, max, status) => {
       progressText.value = `服务繁忙，第 ${attempt}/${max} 次重试... (${status})`
     })
 
     currentTaskId.value = taskId
 
     const type = videoMode.value === 'txt2vid' ? 'text-to-video' : 'image-to-video'
-    addToGallery(type, null, videoPrompt.value || motionPrompt.value, taskId, 'generating')
+    // 创建画廊项，同时保存 taskId 和 videoId（videoId 为 v2.0 推荐查询方式）
+    const galleryItem = addToGallery(type, null, videoPrompt.value || motionPrompt.value, taskId, 'generating')
+    galleryItem.videoId = videoId
+    saveGallery()
 
     progressText.value = '任务已创建，去画廊查看进度'
     toastMsg.value = '任务已创建，进度将在画廊中显示'
@@ -574,20 +577,57 @@ async function generateVideoWrapper() {
 
 /**
  * 启动单个任务的轮询（不影响进度条，仅更新画廊状态）
- * @param {string} taskId - 任务 ID
+ * 优先使用 videoId 走 v2.0 推荐端点 /agnesapi；缺失时先通过旧版 taskId 接口拿到 video_id
+ * 并回填保存，后续轮询自动切换到新接口
+ * @param {string} taskId - 任务 ID（旧版兼容，同时作为轮询 key）
+ * @param {string} [videoId] - 视频 ID（v2.0 推荐）
  */
-function startPolling(taskId) {
+function startPolling(taskId, videoId) {
   if (pollIntervals[taskId]) return
+
+  // 找到对应的画廊作品获取 videoId
+  if (!videoId) {
+    const item = userGalleryItems.value.find(i => i.taskId === taskId)
+    if (item) videoId = item.videoId
+  }
+
+  // 通用：拿到响应 data 后，若其中带 video_id 且画廊项中还没有，则回填保存
+  function backfillVideoId(taskId, data) {
+    if (!data?.video_id) return
+    const item = userGalleryItems.value.find(i => i.taskId === taskId)
+    if (item && !item.videoId) {
+      item.videoId = data.video_id
+      saveGallery()
+      // 下次轮询使用新接口
+      videoId = data.video_id
+    }
+  }
 
   const poll = async () => {
     try {
-      const data = await getVideoStatus(taskId)
+      let data
+      if (videoId) {
+        try {
+          data = await getVideoResult(videoId)
+        } catch (e) {
+          // 新接口失败，回退到旧版 taskId 方式（顺便拿最新的 video_id 回填）
+          data = await getVideoStatus(taskId)
+          backfillVideoId(taskId, data)
+        }
+      } else {
+        // 历史数据只有 taskId，先拿旧版接口，顺便获取 video_id 用于下次用新接口
+        data = await getVideoStatus(taskId)
+        backfillVideoId(taskId, data)
+      }
 
-      if (data.status === 'completed' || data.output?.video_url) {
+      // 统一通过 extractVideoUrl 提取 URL：新版 /agnesapi 在顶层 data.url，旧版在 metadata.url 等
+      const videoUrl = extractVideoUrl(data)
+
+      if (data.status === 'completed' || videoUrl) {
         stopPolling(taskId)
         const item = userGalleryItems.value.find(i => i.taskId === taskId)
         if (item) {
-          item.mediaUrl = data.output?.video_url || data.video_url
+          item.mediaUrl = videoUrl
           item.status = 'completed'
           saveGallery()
         }
@@ -634,7 +674,7 @@ function stopAllPolling() {
 function startGalleryPolling() {
   userGalleryItems.value.forEach(item => {
     if (item.status === 'generating' && item.taskId) {
-      startPolling(item.taskId)
+      startPolling(item.taskId, item.videoId)
     }
   })
 }
@@ -744,15 +784,32 @@ function removeGalleryItem(item) {
 
 /**
  * 检查画廊作品状态（手动触发）
+ * 优先使用 videoId 走推荐端点；缺失时通过旧版 taskId 回填 videoId，失败回退 taskId
  * @param {object} item - 作品对象
  */
 async function checkGalleryItem(item) {
-  if (!item.taskId) { alert('没有任务ID'); return }
+  if (!item.taskId && !item.videoId) { alert('没有任务ID或视频ID'); return }
   try {
-    const data = await getVideoStatus(item.taskId)
+    let data
+    if (item.videoId) {
+      try {
+        data = await getVideoResult(item.videoId)
+      } catch (e) {
+        data = item.taskId ? await getVideoStatus(item.taskId) : null
+        // 回退到旧版时，顺便回填 video_id（旧接口响应里有）
+        if (data?.video_id && !item.videoId) { item.videoId = data.video_id; saveGallery() }
+      }
+    } else if (item.taskId) {
+      data = await getVideoStatus(item.taskId)
+      // 历史数据升级：旧版响应里带 video_id，保存下来以后用新接口
+      if (data?.video_id) { item.videoId = data.video_id; saveGallery() }
+    }
+    if (!data) throw new Error('未获取到数据')
 
-    if (data.status === 'completed' || data.output?.video_url) {
-      item.mediaUrl = data.output?.video_url || data.video_url
+    const videoUrl = extractVideoUrl(data)
+
+    if (data.status === 'completed' || videoUrl) {
+      item.mediaUrl = videoUrl
       item.status = 'completed'
       saveGallery()
       alert('✅ 视频已生成！')
@@ -764,7 +821,7 @@ async function checkGalleryItem(item) {
       item.status = 'generating'
       saveGallery()
       alert('⏳ 仍在生成中，开始轮询...')
-      startPolling(item.taskId, item.type)
+      startPolling(item.taskId, item.videoId)
     }
   } catch (err) {
     alert('检查失败: ' + err.message)
@@ -773,21 +830,33 @@ async function checkGalleryItem(item) {
 
 /**
  * 获取视频 URL（播放时调用）
+ * 优先使用 videoId 走推荐端点，失败回退 taskId，并在回退时回填 video_id
  * @param {object} item - 作品对象
  * @returns {Promise<string|null>} 视频 URL
  */
 async function fetchVideoUrl(item) {
-  if (!item.taskId) return null
+  if (!item.taskId && !item.videoId) return null
   try {
-    const url = await getVideoUrl(item.taskId)
+    const url = await getVideoUrl(item.videoId, item.taskId)
     if (url) {
       item.mediaUrl = url
       item.status = 'completed'
       saveGallery()
       return url
     }
-    const data = await getVideoStatus(item.taskId)
-    if (data.status === 'failed') {
+    // 失败时尝试查询状态以更新失败标记（顺便回填 video_id）
+    let data
+    if (item.videoId) {
+      try { data = await getVideoResult(item.videoId) }
+      catch (e) {
+        data = item.taskId ? await getVideoStatus(item.taskId) : null
+        if (data?.video_id && !item.videoId) { item.videoId = data.video_id; saveGallery() }
+      }
+    } else if (item.taskId) {
+      data = await getVideoStatus(item.taskId)
+      if (data?.video_id) { item.videoId = data.video_id; saveGallery() }
+    }
+    if (data && data.status === 'failed') {
       item.status = 'failed'
       saveGallery()
     }
@@ -797,22 +866,35 @@ async function fetchVideoUrl(item) {
   return null
 }
 
-/** 批量刷新画廊中所有生成中作品的状态 */
+/** 批量刷新画廊中所有生成中作品的状态（优先使用 videoId，缺失时通过旧版回填） */
 async function refreshGalleryStatuses() {
-  const generatingItems = userGalleryItems.value.filter(item => item.status === 'generating' && item.taskId)
+  const generatingItems = userGalleryItems.value.filter(item => item.status === 'generating' && (item.taskId || item.videoId))
   if (generatingItems.length === 0) return
 
   for (const item of generatingItems) {
     try {
-      const data = await getVideoStatus(item.taskId)
-      if (data.status === 'completed' || data.output?.video_url) {
-        item.mediaUrl = data.output?.video_url || data.video_url
+      let data
+      if (item.videoId) {
+        try {
+          data = await getVideoResult(item.videoId)
+        } catch (e) {
+          data = item.taskId ? await getVideoStatus(item.taskId) : null
+          if (data?.video_id && !item.videoId) { item.videoId = data.video_id }
+        }
+      } else if (item.taskId) {
+        data = await getVideoStatus(item.taskId)
+        if (data?.video_id) { item.videoId = data.video_id }
+      }
+      if (!data) continue
+      const videoUrl = extractVideoUrl(data)
+      if (data.status === 'completed' || videoUrl) {
+        item.mediaUrl = videoUrl
         item.status = 'completed'
       } else if (data.status === 'failed') {
         item.status = 'failed'
       }
     } catch (err) {
-      console.warn('刷新状态失败:', item.taskId, err.message)
+      console.warn('刷新状态失败:', item.taskId || item.videoId, err.message)
     }
   }
   saveGallery()
