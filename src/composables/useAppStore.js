@@ -835,6 +835,8 @@ async function checkGalleryItem(item) {
  * @returns {Promise<string|null>} 视频 URL
  */
 async function fetchVideoUrl(item) {
+  // 已有有效 URL 时直接返回，避免重复请求 API（视频 URL 生成后不变）
+  if (item.mediaUrl) return item.mediaUrl
   if (!item.taskId && !item.videoId) return null
   try {
     const url = await getVideoUrl(item.videoId, item.taskId)
