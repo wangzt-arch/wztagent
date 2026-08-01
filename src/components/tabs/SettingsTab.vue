@@ -33,7 +33,7 @@
           <input
             v-model="store.baseUrl.value"
             type="text"
-            placeholder="https://api.agnes-ai.cn/v1"
+            :placeholder="DEFAULT_BASE_URL"
             @input="store.saveSetting('base_url')"
           >
           <div class="input-icon">
@@ -78,6 +78,7 @@
 
 <script setup>
 import { useAppStore } from '../../composables/useAppStore.js'
+import { DEFAULT_BASE_URL } from '../../api/index.js'
 
 const store = useAppStore()
 </script>

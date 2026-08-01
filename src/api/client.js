@@ -7,15 +7,20 @@ import { ref } from 'vue'
 // 判断是否为开发环境
 const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV
 
+/** 默认 API 基础地址（从 .env 读取，拼接 /v1 后缀） */
+const DEFAULT_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://api.agnes-ai.cn') + '/v1'
+
 // API 配置状态（响应式）
 const apiKey = ref('')
-const baseUrl = ref('https://api.agnes-ai.cn/v1')
+const baseUrl = ref(DEFAULT_BASE_URL)
 
 /**
  * 设置 API Key（用于鉴权）
  * @param {string} key - API 密钥
  */
 export function setApiKey(key) { apiKey.value = key }
+
+export { DEFAULT_BASE_URL }
 
 /**
  * 设置 API 基础地址

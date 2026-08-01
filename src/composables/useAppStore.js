@@ -4,7 +4,7 @@
  * 负责管理全局状态、业务逻辑和用户交互
  */
 import { ref, computed, watch } from 'vue'
-import { setApiKey, setBaseUrl, generateImage, testConnection, createVideo, getVideoStatus, getVideoResult, getVideoUrl, extractVideoUrl, chat } from '../api/index.js'
+import { setApiKey, setBaseUrl, DEFAULT_BASE_URL, generateImage, testConnection, createVideo, getVideoStatus, getVideoResult, getVideoUrl, extractVideoUrl, chat } from '../api/index.js'
 
 // ==================== 导航状态 ====================
 
@@ -87,7 +87,7 @@ const toastMsg = ref('')
 /** API Key */
 const apiKey = ref('')
 /** API 基础地址 */
-const baseUrl = ref('https://api.agnes-ai.cn/v1')
+const baseUrl = ref(DEFAULT_BASE_URL)
 /** 当前模型名称 */
 const modelName = ref('agnes-image-2.1-flash')
 /** 当前模型类型 */
@@ -304,7 +304,7 @@ watch(mediaType, (newVal) => {
  */
 function loadSettings() {
   apiKey.value = localStorage.getItem('agnes_api_key') || 'sk-KFwe3zkKdAkSFvFvnUs1uWlH4pWkFAzBHjqfSKNKsfTJAInc'
-  baseUrl.value = localStorage.getItem('agnes_base_url') || 'https://api.agnes-ai.cn/v1'
+  baseUrl.value = localStorage.getItem('agnes_base_url') || DEFAULT_BASE_URL
   const raw = JSON.parse(localStorage.getItem('agnes_gallery') || '[]')
   userGalleryItems.value = raw.map(normalizeGalleryItem)
 

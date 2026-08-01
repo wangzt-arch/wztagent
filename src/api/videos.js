@@ -3,7 +3,7 @@
  * 封装与视频生成相关的接口调用（创建任务、查询状态、获取结果）
  * 基于 Agnes Video V2.0 接口规范
  */
-import { request, getBaseUrlRaw, getApiKeyRaw } from './client.js'
+import { request, getBaseUrlRaw, getApiKeyRaw, DEFAULT_BASE_URL } from './client.js'
 
 // 判断是否为开发环境
 const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV
@@ -53,7 +53,7 @@ function buildAgnesApiUrl(videoId, modelName) {
   if (isDev) {
     return '/agnesapi?' + query
   }
-  const rawBase = getBaseUrlRaw() || 'https://api.agnes-ai.cn/v1'
+  const rawBase = getBaseUrlRaw() || DEFAULT_BASE_URL
   const root = rawBase.replace(/\/v1\/?$/, '')
   return root + '/agnesapi?' + query
 }
