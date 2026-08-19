@@ -55,14 +55,14 @@ npm run dev
 
 ## API 配置与运行差异
 
-默认 API 地址为 `https://apihub.agnes-ai.com/v1`，认证方式为：
+默认 API 地址为 `https://api.agnes-ai.cn/v1`，认证方式为：
 
 ```http
 Authorization: Bearer <API_KEY>
 Content-Type: application/json
 ```
 
-开发环境下，所有 `/api/*` 请求都会由 Vite 转发到 `https://apihub.agnes-ai.com/v1/*`。因此，浏览器开发模式不会使用设置页中的自定义 API 地址。
+开发环境下，所有 `/api/*` 请求都会由 Vite 转发到 `https://api.agnes-ai.cn/v1/*`。因此，浏览器开发模式不会使用设置页中的自定义 API 地址。
 
 生产 Web 构建和 Electron 环境会直接使用设置页中的 API 地址。自托管 Web 版本时，目标 API 必须允许浏览器跨域请求（CORS）；更推荐由自己的服务端代理请求。
 
