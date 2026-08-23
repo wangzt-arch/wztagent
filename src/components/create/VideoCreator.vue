@@ -53,9 +53,11 @@
               <div class="form-group">
                 <label>或上传参考图片</label>
                 <UploadArea
-                  :preview="store.vidImagePreview.value"
+                  :previews="store.vidImagePreview.value"
+                  :max="1"
                   @upload="store.handleVidImageUpload"
                   @drop="store.handleVidImageDrop"
+                  @drop-url="store.handleVidImageDropUrl"
                   @remove="store.removeVidImage"
                 />
               </div>

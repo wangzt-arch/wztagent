@@ -23,8 +23,8 @@ const videoMode = ref('txt2vid')
 const imagePrompt = ref('')
 /** 图生图参考图片 URL */
 const refImageUrl = ref('')
-/** 参考图片预览（base64）*/
-const refImagePreview = ref(null)
+/** 参考图片预览数组（base64），支持多图 */
+const refImagePreview = ref([])
 /** 图生图编辑提示词 */
 const editPrompt = ref('')
 /** 图片尺寸 */
@@ -38,8 +38,13 @@ const negativePrompt = ref('')
 const videoPrompt = ref('')
 /** 图生视频参考图片 URL */
 const videoRefUrl = ref('')
-/** 视频参考图片预览（base64）*/
-const vidImagePreview = ref(null)
+/** 视频参考图片预览数组（base64），视频侧仅取第一张 */
+const vidImagePreview = ref([])
+
+/** 图生图最多支持的参考图数量 */
+const MAX_REF_IMAGES = 10
+/** 图生视频仅支持单张参考图 */
+const MAX_VID_IMAGES = 1
 /** 运动提示词 */
 const motionPrompt = ref('')
 /** 视频帧数 */
@@ -400,44 +405,103 @@ async function _testConnection() {
 // ==================== 文件上传处理 ====================
 
 /**
- * 处理文件上传（input change 事件）
- * @param {Event} e - 事件对象
- * @param {Ref} propRef - 目标响应式引用
+ * 将 FileList 中的图片文件批量读取为 base64 Data URL
+ * @param {FileList|File[]} fileList - 文件列表
+ * @returns {Promise<string[]>} base64 Data URL 数组
  */
-function _handleUpload(e, propRef) {
-  const file = e.target.files[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = (ev) => { propRef.value = ev.target.result }
-  reader.readAsDataURL(file)
+function _readFilesAsDataUrls(fileList) {
+  const files = Array.from(fileList || []).filter(f => f.type.startsWith('image/'))
+  if (files.length === 0) return Promise.resolve([])
+  return Promise.all(files.map(file => new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (ev) => resolve(ev.target.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })))
 }
 
 /**
- * 处理文件拖拽上传
- * @param {DragEvent} e - 拖拽事件对象
- * @param {Ref} propRef - 目标响应式引用
+ * 处理文件上传（input change 事件），支持多文件并合并到现有数组
+ * @param {Event} e - 事件对象
+ * @param {Ref} propRef - 目标响应式引用（数组）
+ * @param {number} max - 最大图片数量
  */
-function _handleDrop(e, propRef) {
-  const file = e.dataTransfer.files[0]
-  if (!file || !file.type.startsWith('image/')) return
-  const reader = new FileReader()
-  reader.onload = (ev) => { propRef.value = ev.target.result }
-  reader.readAsDataURL(file)
+async function _handleUpload(e, propRef, max) {
+  const files = e.target.files
+  if (!files || files.length === 0) return
+  const urls = await _readFilesAsDataUrls(files)
+  if (urls.length === 0) return
+  const merged = [...propRef.value, ...urls].slice(0, max)
+  propRef.value = merged
 }
 
-/** 处理参考图片上传 */
-function handleRefImageUpload(e) { _handleUpload(e, refImagePreview) }
-/** 处理视频参考图片上传 */
-function handleVidImageUpload(e) { _handleUpload(e, vidImagePreview) }
-/** 处理参考图片拖拽 */
-function handleRefImageDrop(e) { _handleDrop(e, refImagePreview) }
-/** 处理视频参考图片拖拽 */
-function handleVidImageDrop(e) { _handleDrop(e, vidImagePreview) }
+/**
+ * 处理文件拖拽上传，支持多文件并合并到现有数组
+ * @param {DragEvent} e - 拖拽事件对象
+ * @param {Ref} propRef - 目标响应式引用（数组）
+ * @param {number} max - 最大图片数量
+ */
+async function _handleDrop(e, propRef, max) {
+  const files = e.dataTransfer?.files
+  if (!files || files.length === 0) return
+  const urls = await _readFilesAsDataUrls(files)
+  if (urls.length === 0) return
+  const merged = [...propRef.value, ...urls].slice(0, max)
+  propRef.value = merged
+}
 
-/** 移除参考图片 */
-function removeRefImage() { refImagePreview.value = null; refImageUrl.value = '' }
-/** 移除视频参考图片 */
-function removeVidImage() { vidImagePreview.value = null; videoRefUrl.value = '' }
+/** 处理参考图片上传（最多 MAX_REF_IMAGES 张） */
+function handleRefImageUpload(e) { _handleUpload(e, refImagePreview, MAX_REF_IMAGES) }
+/** 处理视频参考图片上传（仅 1 张） */
+function handleVidImageUpload(e) { _handleUpload(e, vidImagePreview, MAX_VID_IMAGES) }
+/** 处理参考图片拖拽 */
+function handleRefImageDrop(e) { _handleDrop(e, refImagePreview, MAX_REF_IMAGES) }
+/** 处理视频参考图片拖拽 */
+function handleVidImageDrop(e) { _handleDrop(e, vidImagePreview, MAX_VID_IMAGES) }
+
+/**
+ * 处理参考图片 URL 拖拽（从生成图预览区或其他网页拖来的图片 URL）
+ * 直接把 URL push 到参考图数组，超限时丢弃最早的
+ * @param {string} url - 图片 URL
+ */
+function handleRefImageDropUrl(url) {
+  if (!url) return
+  refImagePreview.value = [...refImagePreview.value, url].slice(-MAX_REF_IMAGES)
+}
+
+/**
+ * 处理视频参考图片 URL 拖拽（视频侧仅支持单张，直接替换）
+ * @param {string} url - 图片 URL
+ */
+function handleVidImageDropUrl(url) {
+  if (!url) return
+  vidImagePreview.value = [url]
+}
+
+/**
+ * 移除参考图片（按索引删除单张）
+ * @param {number} index - 要移除的图片索引
+ */
+function removeRefImage(index) {
+  if (typeof index !== 'number') {
+    // 兼容旧调用：清空全部
+    refImagePreview.value = []
+    return
+  }
+  refImagePreview.value.splice(index, 1)
+}
+
+/**
+ * 移除视频参考图片（按索引删除单张）
+ * @param {number} index - 要移除的图片索引
+ */
+function removeVidImage(index) {
+  if (typeof index !== 'number') {
+    vidImagePreview.value = []
+    return
+  }
+  vidImagePreview.value.splice(index, 1)
+}
 
 // ==================== 生成逻辑 ====================
 
@@ -448,7 +512,7 @@ function removeVidImage() { vidImagePreview.value = null; videoRefUrl.value = ''
 async function generateImageWrapper() {
   if (!apiKey.value) { errorMsg.value = '请先在设置中配置 API Key'; return }
   if (imageMode.value === 'txt2img' && !imagePrompt.value.trim()) { errorMsg.value = '请输入提示词'; return }
-  if (imageMode.value === 'img2img' && !refImageUrl.value && !refImagePreview.value) { errorMsg.value = '请提供参考图片'; return }
+  if (imageMode.value === 'img2img' && !refImageUrl.value && refImagePreview.value.length === 0) { errorMsg.value = '请提供参考图片'; return }
 
   // 并发支持：每次生成都独立追踪，预览区只展示最新任务
   const taskId = Date.now()
@@ -479,8 +543,12 @@ async function generateImageWrapper() {
     }
     if (negativePrompt.value) body.negative_prompt = negativePrompt.value
     if (imageMode.value === 'img2img') {
+      // 合并 URL 与本地上传的参考图，去重后发送给 API
+      const images = []
+      if (refImageUrl.value) images.push(refImageUrl.value)
+      images.push(...refImagePreview.value)
       body.extra_body = {
-        image: [refImageUrl.value || refImagePreview.value],
+        image: images,
         response_format: 'url'
       }
       if (editPrompt.value) body.prompt = editPrompt.value
@@ -530,7 +598,7 @@ async function generateImageWrapper() {
 async function generateVideoWrapper() {
   if (!apiKey.value) { errorMsg.value = '请先在设置中配置 API Key'; return }
   if (videoMode.value === 'txt2vid' && !videoPrompt.value.trim()) { errorMsg.value = '请输入视频描述'; return }
-  if (videoMode.value === 'img2vid' && !videoRefUrl.value && !vidImagePreview.value) { errorMsg.value = '请提供参考图片'; return }
+  if (videoMode.value === 'img2vid' && !videoRefUrl.value && vidImagePreview.value.length === 0) { errorMsg.value = '请提供参考图片'; return }
 
   isVideoGenerating.value = true
   progressWidth.value = 0
@@ -548,7 +616,8 @@ async function generateVideoWrapper() {
     }
     if (videoNegPrompt.value) body.negative_prompt = videoNegPrompt.value
     if (videoMode.value === 'img2vid') {
-      body.image = videoRefUrl.value || vidImagePreview.value
+      // 视频接口仅支持单张参考图，优先使用 URL，否则取第一张上传图
+      body.image = videoRefUrl.value || vidImagePreview.value[0]
     }
 
     const { taskId, videoId } = await createVideo(body, (attempt, max, status) => {
@@ -929,11 +998,17 @@ function downloadVideo() {
   a.click()
 }
 
-/** 将生成的图片作为视频参考图使用 */
+/**
+ * 将生成的图片直接添加为图生图参考图
+ * 点击后切换到图生图模式，并把生成图 URL 追加到左侧上传参考图区域
+ * 超过 MAX_REF_IMAGES 上限时自动丢弃最早的图片
+ */
 function useAsReference() {
-  mediaType.value = 'video'
-  videoMode.value = 'img2vid'
-  videoRefUrl.value = generatedImageUrl.value
+  mediaType.value = 'image'
+  imageMode.value = 'img2img'
+  refImagePreview.value = [...refImagePreview.value, generatedImageUrl.value].slice(-MAX_REF_IMAGES)
+  toastMsg.value = '已添加为参考图'
+  setTimeout(() => { toastMsg.value = '' }, 2000)
 }
 
 // ==================== 工具函数 ====================
@@ -1041,6 +1116,8 @@ export function useAppStore() {
     handleVidImageUpload,
     handleRefImageDrop,
     handleVidImageDrop,
+    handleRefImageDropUrl,
+    handleVidImageDropUrl,
     removeRefImage,
     removeVidImage,
     generateImage: generateImageWrapper,

@@ -53,9 +53,11 @@
               <div class="form-group">
                 <label>或上传参考图片</label>
                 <UploadArea
-                  :preview="store.refImagePreview.value"
+                  :previews="store.refImagePreview.value"
+                  :max="10"
                   @upload="store.handleRefImageUpload"
                   @drop="store.handleRefImageDrop"
+                  @drop-url="store.handleRefImageDropUrl"
                   @remove="store.removeRefImage"
                 />
               </div>
@@ -111,7 +113,14 @@
       <div class="preview-column">
         <Transition name="preview-fade" mode="out-in">
           <div v-if="store.generatedImage.value" key="result" class="preview-card">
-            <img :src="store.generatedImageUrl.value" alt="Generated" class="preview-media">
+            <img
+              :src="store.generatedImageUrl.value"
+              alt="Generated"
+              class="preview-media"
+              draggable="true"
+              title="可拖拽到左侧参考图区域"
+              @dragstart="onPreviewDragStart"
+            >
             <div class="preview-overlay">
               <button class="btn-secondary" @click="store.downloadImage">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -161,6 +170,17 @@ import UploadArea from '../common/UploadArea.vue'
 import { useAppStore } from '../../composables/useAppStore.js'
 
 const store = useAppStore()
+
+/**
+ * 拖拽预览图到左侧参考图区域时，把生成图 URL 写入 dataTransfer
+ * 这样 UploadArea 的 drop 处理能识别为 URL 拖拽并加入参考图数组
+ */
+function onPreviewDragStart(e) {
+  if (!store.generatedImageUrl.value) return
+  e.dataTransfer.setData('text/uri-list', store.generatedImageUrl.value)
+  e.dataTransfer.setData('text/plain', store.generatedImageUrl.value)
+  e.dataTransfer.effectAllowed = 'copy'
+}
 
 const imageModes = [
   { key: 'txt2img', label: '文生图', svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/>' },
@@ -249,6 +269,11 @@ const sizeOptions = [
   display: block;
   border-radius: 0;
   transition: transform 0.5s ease;
+  cursor: grab;
+}
+
+.preview-media:active {
+  cursor: grabbing;
 }
 
 .preview-card:hover .preview-media {
